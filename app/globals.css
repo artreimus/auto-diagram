@@ -120,3 +120,64 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Mermaid Chart Styles */
+@layer components {
+  .mermaid-container {
+    position: relative;
+    width: 100%;
+    overflow: visible;
+    min-height: 200px;
+  }
+
+  /* Ensure Mermaid SVGs are properly contained */
+  .mermaid-container svg {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+  }
+
+  /* Fix for mindmaps and other chart types that may have positioning issues */
+  .mermaid-container .mindmap-svg-container,
+  .mermaid-container .flowchart-v2,
+  .mermaid-container .sequence-diagram,
+  .mermaid-container .class-diagram,
+  .mermaid-container .state-diagram,
+  .mermaid-container .gantt,
+  .mermaid-container .journey,
+  .mermaid-container .timeline {
+    position: relative !important;
+    transform: none !important;
+    left: auto !important;
+    top: auto !important;
+  }
+
+  /* Ensure mindmap nodes are visible */
+  .mermaid-container g.mindmap-node {
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  /* Fix for any absolute positioned elements in charts */
+  .mermaid-container g,
+  .mermaid-container rect,
+  .mermaid-container circle,
+  .mermaid-container ellipse,
+  .mermaid-container path,
+  .mermaid-container polygon,
+  .mermaid-container text {
+    position: relative;
+  }
+
+  /* Ensure proper z-index stacking */
+  .mermaid-container {
+    z-index: 1;
+  }
+
+  /* Prevent charts from escaping their containers */
+  .mermaid-container > div {
+    position: relative;
+    overflow: visible;
+  }
+}
