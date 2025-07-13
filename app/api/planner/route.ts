@@ -1,13 +1,10 @@
-import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { streamObject } from 'ai';
 import { supportedChartTypes } from '@/lib/chart-types';
 import { plannerSchema } from './schema';
+import { createAIModel } from '@/lib/ai-provider';
+import { env } from '@/env.mjs';
 
 export const maxDuration = 30;
-
-const openrouter = createOpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY,
-});
 
 const systemPrompt = `
 You are an expert at creating Mermaid diagrams.
@@ -66,9 +63,9 @@ Always return a direct array, never wrap it in an object with a "charts" key or 
 export async function POST(req: Request) {
   const { messages } = await req.json();
 
-  const result = await streamObject({
+  const result = streamObject({
     schema: plannerSchema,
-    model: openrouter('deepseek/deepseek-r1-0528:free'),
+    model: createAIModel('reasoning', env.AI_PROVIDER),
     system: systemPrompt,
     messages,
   });

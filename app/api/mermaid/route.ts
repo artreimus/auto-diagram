@@ -1,13 +1,10 @@
-import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { streamObject } from 'ai';
 import { supportedChartTypes } from '@/lib/chart-types';
 import { mermaidSchema } from './schema';
+import { createAIModel } from '@/lib/ai-provider';
+import { env } from '@/env.mjs';
 
 export const maxDuration = 30;
-
-const openrouter = createOpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY,
-});
 
 export async function POST(req: Request) {
   const { messages, chartType } = await req.json();
@@ -69,9 +66,9 @@ For state:
 Always ensure your Mermaid syntax is correct and follows the official Mermaid documentation. Use proper escaping for newlines (\\n) in the chart field.
 `;
 
-  const result = await streamObject({
+  const result = streamObject({
     schema: mermaidSchema,
-    model: openrouter('mistralai/devstral-small-2505:free'),
+    model: createAIModel('fast', env.AI_PROVIDER),
     system: systemPrompt,
     messages,
   });
