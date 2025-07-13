@@ -25,6 +25,9 @@ const MermaidDiagram = ({
   description,
 }: MermaidProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const isFixingRef = useRef(false); // Track fixing state with ref to avoid race conditions
+  const currentFixAttemptRef = useRef<string | null>(null); // Track current fix attempt ID
+
   const [currentChart, setCurrentChart] = useState(chart);
   const [retryCount, setRetryCount] = useState(0);
   const [isFixing, setIsFixing] = useState(false);
@@ -84,26 +87,31 @@ const MermaidDiagram = ({
   // Handle fixed chart response
   useEffect(() => {
     if (fixedChart?.chart && fixedChart.chart !== currentChart) {
-      setCurrentChart(fixedChart.chart);
-      setIsFixing(false);
-      setLastError(null);
+      // Only update if this is our current fix attempt
+      if (isFixingRef.current) {
+        setCurrentChart(fixedChart.chart);
+        setIsFixing(false);
+        setLastError(null);
+        isFixingRef.current = false; // Reset the ref
+        currentFixAttemptRef.current = null;
 
-      // Log the successful fix explanation if available
-      if (fixedChart.explanation) {
-        console.log('Chart fixed successfully:', fixedChart.explanation);
+        // Log the successful fix explanation if available
+        if (fixedChart.explanation) {
+          console.log('Chart fixed successfully:', fixedChart.explanation);
 
-        // Update the last attempt in previousAttempts with the successful explanation
-        setPreviousAttempts((prev) => {
-          if (prev.length > 0) {
-            const updated = [...prev];
-            updated[updated.length - 1] = {
-              ...updated[updated.length - 1],
-              explanation: fixedChart.explanation,
-            };
-            return updated;
-          }
-          return prev;
-        });
+          // Update the last attempt in previousAttempts with the successful explanation
+          setPreviousAttempts((prev) => {
+            if (prev.length > 0) {
+              const updated = [...prev];
+              updated[updated.length - 1] = {
+                ...updated[updated.length - 1],
+                explanation: fixedChart.explanation,
+              };
+              return updated;
+            }
+            return prev;
+          });
+        }
       }
     }
   }, [fixedChart, currentChart]);
@@ -116,17 +124,40 @@ const MermaidDiagram = ({
       setIsFixing(false);
       setLastError(null);
       setPreviousAttempts([]); // Reset previous attempts for new chart
+      isFixingRef.current = false; // Reset the ref
+      currentFixAttemptRef.current = null;
     }
   }, [chart, currentChart]);
 
+  // Handle fix errors
+  useEffect(() => {
+    if (fixError && isFixingRef.current) {
+      setIsFixing(false);
+      isFixingRef.current = false;
+      currentFixAttemptRef.current = null;
+    }
+  }, [fixError]);
+
   const attemptFix = useCallback(
     async (errorMessage: string) => {
-      if (retryCount >= maxRetries || !chartType) {
-        console.log(
-          'Max retries reached or missing chartType, not attempting fix'
-        );
+      // Prevent multiple simultaneous fix attempts
+      if (
+        isFixingRef.current ||
+        isLoadingFix ||
+        retryCount >= maxRetries ||
+        !chartType
+      ) {
+        console.log('Fix already in progress or conditions not met, skipping');
         return;
       }
+
+      console.log(
+        `Attempting to fix chart (attempt ${retryCount + 1}/${maxRetries})`
+      );
+
+      // Generate unique ID for this fix attempt
+      const fixAttemptId = `fix-${Date.now()}-${Math.random()}`;
+      currentFixAttemptRef.current = fixAttemptId;
 
       // Store the current failed attempt before trying to fix
       const failedAttempt: FixAttempt = {
@@ -134,6 +165,8 @@ const MermaidDiagram = ({
         error: errorMessage,
       };
 
+      // Set fixing state
+      isFixingRef.current = true;
       setIsFixing(true);
       setRetryCount((prev) => prev + 1);
 
@@ -150,32 +183,44 @@ const MermaidDiagram = ({
         setPreviousAttempts((prev) => [...prev, failedAttempt]);
       } catch (error) {
         console.error('Error submitting fix request:', error);
-        setIsFixing(false);
 
-        // Still add the failed attempt to history even if fix request fails
+        // Only reset state if this is still our current fix attempt
+        if (currentFixAttemptRef.current === fixAttemptId) {
+          setIsFixing(false);
+          isFixingRef.current = false;
+          currentFixAttemptRef.current = null;
+        }
+
+        // Still add the failed attempt to history
         setPreviousAttempts((prev) => [...prev, failedAttempt]);
       }
     },
     [
+      chartType,
+      description,
+      currentChart,
       retryCount,
       maxRetries,
-      chartType,
-      currentChart,
-      description,
-      previousAttempts,
+      isLoadingFix,
       submitFix,
+      previousAttempts,
     ]
   );
 
   useEffect(() => {
     if (currentChart && containerRef.current) {
+      // Skip rendering if we're currently fixing
+      if (isFixingRef.current) {
+        return;
+      }
+
       // Clear the container first
       containerRef.current.innerHTML = '';
 
       mermaid
         .render(validId, currentChart)
         .then(({ svg, bindFunctions }) => {
-          if (containerRef.current) {
+          if (containerRef.current && !isFixingRef.current) {
             containerRef.current.innerHTML = svg;
             if (bindFunctions) {
               bindFunctions(containerRef.current);
@@ -186,15 +231,17 @@ const MermaidDiagram = ({
           }
         })
         .catch((error) => {
+          // Skip error handling if we're currently fixing
+          if (isFixingRef.current) {
+            return;
+          }
+
           const errorMessage = error.message || error.toString();
           console.error('Error rendering Mermaid chart:', error);
           setLastError(errorMessage);
 
           // Attempt to fix the chart if we haven't exceeded max retries
-          if (retryCount < maxRetries && chartType && !isFixing) {
-            console.log(
-              `Attempting to fix chart (attempt ${retryCount + 1}/${maxRetries})`
-            );
+          if (retryCount < maxRetries && chartType && !isFixingRef.current) {
             attemptFix(errorMessage);
           } else {
             // Show error if we can't or won't try to fix
@@ -215,7 +262,7 @@ const MermaidDiagram = ({
           }
         });
     }
-  }, [validId, currentChart, retryCount, chartType, isFixing, attemptFix]);
+  }, [validId, currentChart, retryCount, chartType, attemptFix]);
 
   // Show fixing state
   if (isFixing || isLoadingFix) {
