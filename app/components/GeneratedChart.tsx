@@ -51,7 +51,12 @@ export function GeneratedChart({ plan }: { plan: DeepPartial<ChartPlan> }) {
         {chart?.description ?? plan.description ?? 'Generating...'}
       </p>
       {chart?.chart ? (
-        <MermaidDiagram id={nanoid()} chart={chart.chart} />
+        <MermaidDiagram
+          id={nanoid()}
+          chart={chart.chart}
+          chartType={chart.type || plan.type}
+          description={chart.description || plan.description}
+        />
       ) : (
         <div className='flex items-center justify-center p-8 min-h-[200px]'>
           <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600'></div>
