@@ -98,7 +98,7 @@ Analyze the error, understand what syntax rules were violated, and provide a cor
 
   const result = streamObject({
     schema: mermaidSchema,
-    model: createAIModel('fast', env.AI_PROVIDER),
+    model: createAIModel('reasoning', env.AI_PROVIDER),
     system: systemPrompt,
     messages: [
       {
