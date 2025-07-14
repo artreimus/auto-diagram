@@ -69,11 +69,9 @@ const MermaidDiagram = ({
   description,
 }: MermaidProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const fixRequestInFlight = useRef(false);
 
   const [currentChart, setCurrentChart] = useState(chart);
   const [retryCount, setRetryCount] = useState(0);
-  const [isFixing, setIsFixing] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
   const [previousAttempts, setPreviousAttempts] = useState<FixAttempt[]>([]);
   const [showSyntax, setShowSyntax] = useState(false);
@@ -182,9 +180,7 @@ const MermaidDiagram = ({
   useEffect(() => {
     if (fixedChart?.chart && fixedChart.chart !== currentChart) {
       // A fix has been returned.
-      fixRequestInFlight.current = false;
       setCurrentChart(fixedChart.chart);
-      setIsFixing(false); // Stop showing the main fixing spinner
       setLastError(null);
 
       if (fixedChart.explanation) {
@@ -209,19 +205,9 @@ const MermaidDiagram = ({
   useEffect(() => {
     setCurrentChart(chart);
     setRetryCount(0);
-    setIsFixing(false);
     setLastError(null);
     setPreviousAttempts([]);
-    fixRequestInFlight.current = false;
   }, [chart]);
-
-  // Handle fix submission errors
-  useEffect(() => {
-    if (fixError) {
-      fixRequestInFlight.current = false;
-      setIsFixing(false);
-    }
-  }, [fixError]);
 
   // Download chart as PNG with sophisticated styling
   const downloadChart = useCallback(() => {
@@ -362,7 +348,7 @@ const MermaidDiagram = ({
     }
 
     // Don't try to render if a fix is in progress.
-    if (fixRequestInFlight.current) {
+    if (isLoadingFix) {
       return;
     }
 
@@ -370,20 +356,12 @@ const MermaidDiagram = ({
     containerRef.current.innerHTML = '';
 
     const attemptFix = async (errorMessage: string) => {
-      if (
-        fixRequestInFlight.current ||
-        isLoadingFix ||
-        retryCount >= maxRetries ||
-        !chartType
-      ) {
+      if (isLoadingFix || retryCount >= maxRetries || !chartType) {
         return;
       }
 
-      fixRequestInFlight.current = true;
       const currentRetryCount = retryCount + 1;
       setRetryCount(currentRetryCount);
-      setIsFixing(true);
-      setLastError(errorMessage);
 
       const failedAttempt: FixAttempt = {
         chart: currentChart,
@@ -403,15 +381,13 @@ const MermaidDiagram = ({
         });
       } catch (error) {
         console.error('Error submitting refinement request:', error);
-        fixRequestInFlight.current = false;
-        setIsFixing(false);
       }
     };
 
     mermaid
       .render(validId, currentChart)
       .then(({ svg, bindFunctions }) => {
-        if (containerRef.current && !isStale && !fixRequestInFlight.current) {
+        if (containerRef.current && !isStale && !isLoadingFix) {
           containerRef.current.innerHTML = svg;
           if (bindFunctions) {
             bindFunctions(containerRef.current);
@@ -424,7 +400,7 @@ const MermaidDiagram = ({
         }
       })
       .catch((error) => {
-        if (isStale || fixRequestInFlight.current) {
+        if (isStale || isLoadingFix) {
           return;
         }
 
@@ -468,12 +444,12 @@ const MermaidDiagram = ({
   ]);
 
   // Show fixing state
-  if (isFixing && fixRequestInFlight.current) {
+  if (isLoadingFix) {
     return <FixingSpinner attempt={retryCount} maxRetries={maxRetries} />;
   }
 
   // Show fix submission error
-  if (fixError && !isLoadingFix && !isFixing) {
+  if (fixError && !isLoadingFix) {
     return (
       <motion.div
         initial={{ opacity: 0, scale: 0.98 }}
@@ -539,7 +515,7 @@ const MermaidDiagram = ({
     <div className='space-y-6'>
       {/* Success message when chart was auto-fixed */}
       <AnimatePresence>
-        {fixedChart?.explanation && retryCount > 0 && !isFixing && (
+        {fixedChart?.explanation && retryCount > 0 && !isLoadingFix && (
           <motion.div
             initial={{ opacity: 0, y: -8, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
