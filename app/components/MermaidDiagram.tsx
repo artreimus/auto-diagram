@@ -1,16 +1,24 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { experimental_useObject as useObject } from '@ai-sdk/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import mermaid from 'mermaid';
 import { mermaidSchema } from '@/app/api/mermaid/schema';
+import { DeepPartial } from 'ai';
 
 type MermaidProps = {
   id: string;
   chart: string;
-  chartType?: string;
-  description?: string;
+  onRenderError: (errorMessage: string) => void;
+  isLoadingFix: boolean;
+  fixError: Error | null;
+  fixedChart: DeepPartial<typeof mermaidSchema> | undefined;
+  retryCount: number;
+  maxRetries: number;
+  lastError: string | null;
+  previousAttempts: FixAttempt[];
+  showSyntax: boolean;
+  setShowSyntax: (show: boolean) => void;
 };
 
 interface FixAttempt {
@@ -65,32 +73,22 @@ const FixingSpinner = ({
 const MermaidDiagram = ({
   id,
   chart,
-  chartType,
-  description,
+  onRenderError,
+  isLoadingFix,
+  fixError,
+  fixedChart,
+  retryCount,
+  maxRetries,
+  lastError,
+  previousAttempts,
+  showSyntax,
+  setShowSyntax,
 }: MermaidProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
-
-  const [currentChart, setCurrentChart] = useState(chart);
-  const [retryCount, setRetryCount] = useState(0);
-  const [lastError, setLastError] = useState<string | null>(null);
-  const [previousAttempts, setPreviousAttempts] = useState<FixAttempt[]>([]);
-  const [showSyntax, setShowSyntax] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
-
-  const maxRetries = 3;
 
   // Ensure the ID is a valid CSS selector
   const validId = `mermaid-${id.replace(/[^a-zA-Z0-9-_]/g, '').replace(/^[0-9]/, 'n$&')}`;
-
-  const {
-    object: fixedChart,
-    submit: submitFix,
-    isLoading: isLoadingFix,
-    error: fixError,
-  } = useObject({
-    api: '/api/mermaid/fix',
-    schema: mermaidSchema,
-  });
 
   useEffect(() => {
     // Initialize Mermaid with our sophisticated monochrome theme
@@ -175,39 +173,6 @@ const MermaidDiagram = ({
       state: { useMaxWidth: true },
     });
   }, []);
-
-  // Handle fixed chart response
-  useEffect(() => {
-    if (fixedChart?.chart && fixedChart.chart !== currentChart) {
-      // A fix has been returned.
-      setCurrentChart(fixedChart.chart);
-      setLastError(null);
-
-      if (fixedChart.explanation) {
-        console.log('Chart refined successfully:', fixedChart.explanation);
-        // Update the last attempt with the explanation from the server
-        setPreviousAttempts((prev) => {
-          if (prev.length > 0) {
-            const updated = [...prev];
-            updated[updated.length - 1] = {
-              ...updated[updated.length - 1],
-              explanation: fixedChart.explanation,
-            };
-            return updated;
-          }
-          return prev;
-        });
-      }
-    }
-  }, [fixedChart, currentChart]);
-
-  // When the component receives a new chart prop, reset its state.
-  useEffect(() => {
-    setCurrentChart(chart);
-    setRetryCount(0);
-    setLastError(null);
-    setPreviousAttempts([]);
-  }, [chart]);
 
   // Download chart as PNG with sophisticated styling
   const downloadChart = useCallback(() => {
@@ -334,16 +299,16 @@ const MermaidDiagram = ({
   // Copy syntax with elegant feedback
   const copySyntax = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(currentChart);
+      await navigator.clipboard.writeText(chart);
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);
     } catch (error) {
       console.error('Failed to copy syntax:', error);
     }
-  }, [currentChart]);
+  }, [chart]);
 
   useEffect(() => {
-    if (!currentChart || !containerRef.current) {
+    if (!chart || !containerRef.current) {
       return;
     }
 
@@ -355,47 +320,13 @@ const MermaidDiagram = ({
     let isStale = false;
     containerRef.current.innerHTML = '';
 
-    const attemptFix = async (errorMessage: string) => {
-      if (isLoadingFix || retryCount >= maxRetries || !chartType) {
-        return;
-      }
-
-      const currentRetryCount = retryCount + 1;
-      setRetryCount(currentRetryCount);
-
-      const failedAttempt: FixAttempt = {
-        chart: currentChart,
-        error: errorMessage,
-      };
-      // Store the attempt immediately
-      const newAttempts = [...previousAttempts, failedAttempt];
-      setPreviousAttempts(newAttempts);
-
-      try {
-        await submitFix({
-          chart: currentChart,
-          error: errorMessage,
-          chartType,
-          description,
-          previousAttempts: newAttempts,
-        });
-      } catch (error) {
-        console.error('Error submitting refinement request:', error);
-      }
-    };
-
     mermaid
-      .render(validId, currentChart)
+      .render(validId, chart)
       .then(({ svg, bindFunctions }) => {
         if (containerRef.current && !isStale && !isLoadingFix) {
           containerRef.current.innerHTML = svg;
           if (bindFunctions) {
             bindFunctions(containerRef.current);
-          }
-          setLastError(null);
-          // Reset retry count on success
-          if (retryCount > 0) {
-            setRetryCount(0);
           }
         }
       })
@@ -406,42 +337,12 @@ const MermaidDiagram = ({
 
         const errorMessage = error.message || error.toString();
         console.error('Error rendering visualization:', error);
-
-        if (retryCount < maxRetries) {
-          attemptFix(errorMessage);
-        } else {
-          // Retries exhausted, show final error
-          setLastError(errorMessage);
-          if (containerRef.current) {
-            const showRetryInfo = retryCount > 0;
-            containerRef.current.innerHTML = `
-                <div class="text-monochrome-silver p-6 border border-monochrome-pewter/30 bg-monochrome-charcoal/10 rounded-2xl backdrop-blur-sm">
-                  <p class="font-medium text-monochrome-cloud mb-2">Visualization Error${showRetryInfo ? ` (after ${retryCount} refinement attempts)` : ''}</p>
-                  <p class="text-sm mb-4 font-light">${errorMessage}</p>
-                  ${showRetryInfo ? '<p class="text-xs text-monochrome-ash">Auto-refinement attempts exhausted.</p>' : ''}
-                  <details class="mt-4">
-                    <summary class="text-sm cursor-pointer hover:text-monochrome-cloud transition-colors font-medium">View source code</summary>
-                    <pre class="mt-3 text-xs whitespace-pre-wrap bg-monochrome-graphite/20 p-4 rounded-xl font-mono text-monochrome-pearl">${currentChart}</pre>
-                  </details>
-                </div>
-              `;
-          }
-        }
+        onRenderError(errorMessage);
       });
     return () => {
       isStale = true;
     };
-  }, [
-    validId,
-    currentChart,
-    chartType,
-    description,
-    retryCount,
-    maxRetries,
-    isLoadingFix,
-    submitFix,
-    previousAttempts,
-  ]);
+  }, [validId, chart, isLoadingFix, onRenderError]);
 
   // Show fixing state
   if (isLoadingFix) {
@@ -463,7 +364,7 @@ const MermaidDiagram = ({
               Refinement process encountered an issue
             </p>
             <p className='text-sm text-monochrome-silver font-light mb-2'>
-              Fix error: {fixError.message || 'Unknown error'}
+              Fix error: {fixError?.message || 'Unknown error'}
             </p>
             <p className='text-sm text-monochrome-ash font-light'>
               Original error: {lastError}
@@ -504,10 +405,39 @@ const MermaidDiagram = ({
             View source code
           </summary>
           <pre className='mt-3 text-xs whitespace-pre-wrap bg-monochrome-graphite/20 p-4 rounded-xl font-mono text-monochrome-pearl'>
-            {currentChart}
+            {chart}
           </pre>
         </details>
       </motion.div>
+    );
+  }
+
+  // Final error state after retries
+  if (lastError && !isLoadingFix) {
+    const showRetryInfo = retryCount > 0;
+    return (
+      <div className='text-monochrome-silver p-6 border border-monochrome-pewter/30 bg-monochrome-charcoal/10 rounded-2xl backdrop-blur-sm'>
+        <p className='font-medium text-monochrome-cloud mb-2'>
+          Visualization Error
+          {showRetryInfo ? ` (after ${retryCount} refinement attempts)` : ''}
+        </p>
+        <p className='text-sm mb-4 font-light'>{lastError}</p>
+        {showRetryInfo ? (
+          <p className='text-xs text-monochrome-ash'>
+            Auto-refinement attempts exhausted.
+          </p>
+        ) : (
+          ''
+        )}
+        <details className='mt-4'>
+          <summary className='text-sm cursor-pointer hover:text-monochrome-cloud transition-colors font-medium'>
+            View source code
+          </summary>
+          <pre className='mt-3 text-xs whitespace-pre-wrap bg-monochrome-graphite/20 p-4 rounded-xl font-mono text-monochrome-pearl'>
+            {chart}
+          </pre>
+        </details>
+      </div>
     );
   }
 
@@ -582,7 +512,7 @@ const MermaidDiagram = ({
               </motion.button>
             </div>
             <pre className='p-6 text-sm whitespace-pre-wrap font-mono text-monochrome-silver leading-relaxed overflow-auto max-h-80'>
-              {currentChart}
+              {chart}
             </pre>
           </motion.div>
         )}

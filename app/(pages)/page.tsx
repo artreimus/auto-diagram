@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { experimental_useObject as useObject } from '@ai-sdk/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { chartPlanSchema as plannerSchema } from '@/app/api/planner/schema';
 import { GeneratedChart } from '../components/GeneratedChart';
+import { useLocalStorage } from '@uidotdev/usehooks';
+import {
+  HistoryChart,
+  HistorySession,
+  historySessionSchema,
+} from '@/app/lib/history';
+import { nanoid } from 'nanoid';
 
 // Animation configurations - inspired by Apple's fluid motion
 const springConfig = {
@@ -45,6 +52,14 @@ const MinimalLoadingSpinner = () => (
 export default function DemoPage() {
   const [prompt, setPrompt] = useState('');
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [hasSaved, setHasSaved] = useState(false);
+  const [completedCharts, setCompletedCharts] = useState<
+    Map<number, HistoryChart>
+  >(new Map());
+  const [history, setHistory] = useLocalStorage<HistorySession[]>(
+    'chart-history',
+    []
+  );
 
   const {
     object: plannedCharts,
@@ -61,8 +76,53 @@ export default function DemoPage() {
     if (!prompt.trim()) return;
 
     setHasSubmitted(true);
+    setCompletedCharts(new Map()); // Reset completed charts for new session
+    setHasSaved(false); // Reset save status for new session
     submit({ messages: [{ role: 'user', content: prompt }] });
   };
+
+  const handleChartComplete = useCallback(
+    (id: number, chartData: HistoryChart) => {
+      setCompletedCharts((prev) => new Map(prev).set(id, chartData));
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (
+      !plannedCharts ||
+      !Array.isArray(plannedCharts) ||
+      plannedCharts.length === 0 ||
+      hasSaved // Don't save if already saved
+    ) {
+      return;
+    }
+
+    const allChartsCompleted =
+      completedCharts.size === plannedCharts.length && completedCharts.size > 0;
+
+    if (allChartsCompleted) {
+      const newSession: HistorySession = {
+        id: nanoid(),
+        prompt: prompt,
+        createdAt: new Date().toISOString(),
+        charts: Array.from(completedCharts.values()),
+      };
+
+      // Validate the new session before adding it to history
+      const validation = historySessionSchema.safeParse(newSession);
+
+      if (validation.success) {
+        setHistory([...history, validation.data]);
+        setHasSaved(true); // Mark as saved to prevent re-triggering
+      } else {
+        console.error(
+          'Failed to validate and save new session:',
+          validation.error
+        );
+      }
+    }
+  }, [completedCharts, plannedCharts, history, setHistory, prompt, hasSaved]);
 
   const error = planningError
     ? 'Something went wrong. Please try again.'
@@ -257,7 +317,11 @@ export default function DemoPage() {
                             ease: 'easeOut',
                           }}
                         >
-                          <GeneratedChart plan={plan} />
+                          <GeneratedChart
+                            plan={plan}
+                            planId={index}
+                            onComplete={handleChartComplete}
+                          />
                         </motion.div>
                       ) : null
                     )}
