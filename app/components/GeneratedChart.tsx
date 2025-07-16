@@ -9,7 +9,6 @@ import { ChartPlan } from '@/app/api/planner/schema';
 import { DeepPartial } from 'ai';
 import { useEffect, useState, useMemo } from 'react';
 import { FixAttempt, HistoryChart } from '@/app/lib/history';
-import { MermaidChart } from '@/app/api/mermaid/schema';
 
 // Refined loading spinner for chart generation
 const ChartLoadingSpinner = () => (
@@ -134,9 +133,11 @@ export function GeneratedChart({
       isSuccess || retryCount >= maxRetries || fixError || initialChartError;
 
     if (isFinished) {
+      const resultChart = fixedChart || initialChart;
       onComplete(planId, {
         plan: plan as ChartPlan,
-        mermaid: (fixedChart || initialChart) as MermaidChart | undefined,
+        chart: resultChart?.chart ?? '',
+        explanation: resultChart?.explanation,
         fixAttempts: previousAttempts,
         finalError:
           retryCount >= maxRetries

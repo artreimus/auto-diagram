@@ -104,7 +104,7 @@ export default function DemoPage() {
     if (allChartsCompleted) {
       const newSession: HistorySession = {
         id: nanoid(),
-        prompt: prompt,
+        messages: [{ role: 'user', content: prompt }],
         createdAt: new Date().toISOString(),
         charts: Array.from(completedCharts.values()),
       };
