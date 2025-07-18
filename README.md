@@ -1,4 +1,4 @@
-# Mermaid Sketch AI
+# Auto Diagram
 
 Effortlessly generate beautiful [Mermaid](https://mermaid.js.org/) diagrams from your ideas using AI.
 
