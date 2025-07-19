@@ -97,12 +97,12 @@ export default function SessionPage() {
       {/* Luxurious gradient overlay for depth */}
       <div className='absolute inset-0 bg-gradient-to-br from-monochrome-charcoal/20 via-transparent to-monochrome-graphite/10 pointer-events-none' />
 
-      <div className='relative z-10'>
+      <div className='relative z-10 pt-6'>
         <motion.div
           initial={{ opacity: 0, y: 32 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: 'easeOut' }}
-          className='w-full mx-auto px-6 py-16'
+          className='w-full mx-auto px-6 py-8'
         >
           {/* Session header */}
           <div className='mb-8'>

@@ -59,19 +59,26 @@ export function HistorySidebar({
   );
 
   return (
-    <Sidebar side='left' variant='sidebar'>
+    <Sidebar
+      side='left'
+      variant='sidebar'
+      className='bg-monochrome-charcoal/95 backdrop-blur-xl border-r border-monochrome-pewter/20'
+    >
       <SidebarHeader className='border-b border-monochrome-pewter/20'>
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
           className='flex items-center justify-between p-2'
         >
-          <div className='flex items-center space-x-2'>
+          <button
+            onClick={onNewSession}
+            className='flex items-center space-x-2 hover:bg-monochrome-pure-white/5 rounded-lg px-2 py-1 transition-colors duration-200'
+          >
             <ChartBar className='w-5 h-5 text-monochrome-pure-white' />
             <h2 className='text-lg font-light text-monochrome-pure-white tracking-tight'>
               Auto Diagram
             </h2>
-          </div>
+          </button>
         </motion.div>
 
         <motion.div
@@ -90,7 +97,7 @@ export function HistorySidebar({
         </motion.div>
       </SidebarHeader>
 
-      <SidebarContent className='bg-monochrome-charcoal/20'>
+      <SidebarContent className='bg-transparent'>
         <SidebarGroup>
           <SidebarGroupLabel className='flex items-center space-x-2 text-monochrome-silver'>
             <Clock className='w-4 h-4' />

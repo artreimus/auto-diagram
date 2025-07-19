@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { SidebarTrigger } from '@/components/ui/sidebar';
+
 import { chartPlanSchema as plannerSchema } from '@/app/api/planner/schema';
 import { GeneratedChart } from '../components/GeneratedChart';
 import {
@@ -159,25 +159,14 @@ export default function HomePage() {
       <div className='absolute inset-0 bg-gradient-to-br from-monochrome-charcoal/20 via-transparent to-monochrome-graphite/10 pointer-events-none' />
 
       <div className='relative z-10'>
-        {/* Header with sidebar trigger - only show after submission */}
-        {hasSubmitted && (
-          <div className='flex items-center space-x-4 p-4 border-b border-monochrome-pewter/20'>
-            <SidebarTrigger className='text-monochrome-pure-white' />
-            <div className='flex-1'>
-              <p className='text-sm text-monochrome-silver'>
-                Generating session...
-              </p>
-            </div>
-          </div>
-        )}
+        {/* Header removed - now handled by layout */}
 
         {/* Input container - animates from center to top */}
         <motion.div
           layout
           initial={false}
           animate={{
-            paddingTop: hasSubmitted ? '56px' : '0px',
-            minHeight: hasSubmitted ? 'auto' : '100vh',
+            minHeight: hasSubmitted ? 'auto' : 'calc(100vh - 72px)',
           }}
           transition={springConfig}
           className='container mx-auto px-6 flex flex-col'
@@ -284,7 +273,7 @@ export default function HomePage() {
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className='flex items-center justify-center py-16'
+                  className='flex items-center justify-center py-8'
                 >
                   <div className='flex items-center space-x-4'>
                     <MinimalLoadingSpinner />

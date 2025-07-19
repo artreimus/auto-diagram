@@ -129,19 +129,29 @@ export function ClientLayout({ children }: ClientLayoutProps) {
         />
 
         <SidebarInset className='flex-1'>
-          {/* Sidebar trigger header - only show on non-root pages */}
-          {pathname !== '/' && (
-            <div className='flex items-center space-x-4 p-4 border-b border-monochrome-pewter/20'>
-              <SidebarTrigger className='text-monochrome-pure-white' />
-              {currentSessionId && (
-                <div className='flex-1'>
-                  <p className='text-sm text-monochrome-silver'>
-                    Session: {currentSessionId.slice(0, 8)}...
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
+          {/* Sidebar trigger header - always visible */}
+          <div className='flex items-center space-x-4 p-4 border-b border-monochrome-pewter/20'>
+            <SidebarTrigger className='text-monochrome-pure-white' />
+            {currentSessionId && (
+              <div className='flex-1'>
+                <p className='text-sm text-monochrome-silver'>
+                  {(() => {
+                    const session = history.find(
+                      (s) => s.id === currentSessionId
+                    );
+                    if (session) {
+                      const truncated =
+                        session.prompt.length > 40
+                          ? session.prompt.substring(0, 40) + '...'
+                          : session.prompt;
+                      return truncated;
+                    }
+                    return `Session: ${currentSessionId.slice(0, 8)}...`;
+                  })()}
+                </p>
+              </div>
+            )}
+          </div>
 
           {/* Main content */}
           <div className='relative flex-1'>{children}</div>
