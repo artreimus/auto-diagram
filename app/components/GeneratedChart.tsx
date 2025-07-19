@@ -3,6 +3,7 @@
 import { experimental_useObject as useObject } from '@ai-sdk/react';
 import { motion } from 'framer-motion';
 import { nanoid } from 'nanoid';
+import ReactMarkdown from 'react-markdown';
 import MermaidDiagram from './MermaidDiagram';
 import { mermaidSchema } from '@/app/api/mermaid/schema';
 import { ChartPlan } from '@/app/api/planner/schema';
@@ -258,14 +259,50 @@ export function GeneratedChart({
           {chart?.type ?? plan.type ?? 'Chart'} Visualization
         </motion.h3>
 
-        <motion.p
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.4, delay: 0.2 }}
-          className='text-monochrome-silver font-light leading-relaxed text-sm tracking-wide'
+          className='text-monochrome-silver font-light leading-relaxed text-sm tracking-wide prose prose-sm prose-invert max-w-none'
         >
-          {plan.description ?? 'Preparing visualization...'}
-        </motion.p>
+          {plan.description ? (
+            <ReactMarkdown
+              components={{
+                p: ({ children }) => (
+                  <p className='mb-2 last:mb-0'>{children}</p>
+                ),
+                strong: ({ children }) => (
+                  <strong className='font-medium text-monochrome-cloud'>
+                    {children}
+                  </strong>
+                ),
+                em: ({ children }) => (
+                  <em className='italic text-monochrome-pearl'>{children}</em>
+                ),
+                code: ({ children }) => (
+                  <code className='bg-monochrome-graphite/50 px-1.5 py-0.5 rounded text-monochrome-pearl font-mono text-xs'>
+                    {children}
+                  </code>
+                ),
+                ul: ({ children }) => (
+                  <ul className='list-disc list-inside space-y-1'>
+                    {children}
+                  </ul>
+                ),
+                ol: ({ children }) => (
+                  <ol className='list-decimal list-inside space-y-1'>
+                    {children}
+                  </ol>
+                ),
+                li: ({ children }) => <li className='text-sm'>{children}</li>,
+              }}
+            >
+              {plan.description}
+            </ReactMarkdown>
+          ) : (
+            'Preparing visualization...'
+          )}
+        </motion.div>
       </div>
 
       {/* Chart content or loading state */}
