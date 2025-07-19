@@ -41,10 +41,12 @@ export function GeneratedChart({
   plan,
   planId,
   onComplete,
+  originalUserMessage,
 }: {
   plan: DeepPartial<ChartPlan>;
   planId: number;
   onComplete: (id: number, chartData: HistoryChart) => void;
+  originalUserMessage: string;
 }) {
   const [currentChart, setCurrentChart] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
@@ -84,6 +86,8 @@ export function GeneratedChart({
       submitInitialChart({
         messages: [{ role: 'user', content: plan.description }],
         chartType: plan.type,
+        originalUserMessage: originalUserMessage,
+        planDescription: plan.description,
       });
     }
   }, [
@@ -92,6 +96,7 @@ export function GeneratedChart({
     submitInitialChart,
     isLoadingInitialChart,
     initialChart,
+    originalUserMessage,
   ]);
 
   useEffect(() => {
@@ -136,8 +141,18 @@ export function GeneratedChart({
       const resultChart = fixedChart || initialChart;
       onComplete(planId, {
         plan: plan as ChartPlan,
-        chart: resultChart?.chart ?? '',
-        explanation: resultChart?.explanation,
+        mermaid:
+          resultChart &&
+          resultChart.type &&
+          resultChart.description &&
+          resultChart.chart
+            ? {
+                type: resultChart.type,
+                description: resultChart.description,
+                chart: resultChart.chart,
+                explanation: resultChart.explanation,
+              }
+            : undefined,
         fixAttempts: previousAttempts,
         finalError:
           retryCount >= maxRetries
@@ -185,7 +200,9 @@ export function GeneratedChart({
         chart: currentChart,
         error: errorMessage,
         chartType: plan.type,
-        description: plan.description,
+        description: initialChart?.description,
+        originalUserMessage: originalUserMessage,
+        planDescription: plan.description,
         previousAttempts: newAttempts,
       });
     }
@@ -243,9 +260,7 @@ export function GeneratedChart({
           transition={{ duration: 0.4, delay: 0.2 }}
           className='text-monochrome-silver font-light leading-relaxed text-sm tracking-wide'
         >
-          {chart?.description ??
-            plan.description ??
-            'Preparing visualization...'}
+          {plan.description ?? 'Preparing visualization...'}
         </motion.p>
       </div>
 
