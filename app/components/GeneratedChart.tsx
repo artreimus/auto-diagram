@@ -263,13 +263,13 @@ export function GeneratedChart({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.4, delay: 0.2 }}
-          className='text-monochrome-silver font-light leading-relaxed text-sm tracking-wide prose prose-sm prose-invert max-w-none'
+          className='text-monochrome-silver font-light leading-loose text-sm tracking-wide prose prose-sm prose-invert max-w-none'
         >
           {plan.description ? (
             <ReactMarkdown
               components={{
                 p: ({ children }) => (
-                  <p className='mb-2 last:mb-0'>{children}</p>
+                  <p className='mb-3 last:mb-0 leading-loose'>{children}</p>
                 ),
                 strong: ({ children }) => (
                   <strong className='font-medium text-monochrome-cloud'>
@@ -285,16 +285,38 @@ export function GeneratedChart({
                   </code>
                 ),
                 ul: ({ children }) => (
-                  <ul className='list-disc list-inside space-y-1'>
+                  <ul className='list-disc list-inside space-y-1.5 mb-3'>
                     {children}
                   </ul>
                 ),
                 ol: ({ children }) => (
-                  <ol className='list-decimal list-inside space-y-1'>
+                  <ol className='list-decimal list-inside space-y-1.5 mb-3'>
                     {children}
                   </ol>
                 ),
-                li: ({ children }) => <li className='text-sm'>{children}</li>,
+                li: ({ children }) => (
+                  <li className='text-sm leading-loose'>{children}</li>
+                ),
+                h1: ({ children }) => (
+                  <h1 className='text-lg font-medium text-monochrome-pure-white mb-3 mt-4 first:mt-0'>
+                    {children}
+                  </h1>
+                ),
+                h2: ({ children }) => (
+                  <h2 className='text-base font-medium text-monochrome-pure-white mb-2 mt-3 first:mt-0'>
+                    {children}
+                  </h2>
+                ),
+                h3: ({ children }) => (
+                  <h3 className='text-sm font-medium text-monochrome-cloud mb-2 mt-3 first:mt-0'>
+                    {children}
+                  </h3>
+                ),
+                blockquote: ({ children }) => (
+                  <blockquote className='border-l-2 border-monochrome-pewter/30 pl-4 italic text-monochrome-silver/90 mb-3'>
+                    {children}
+                  </blockquote>
+                ),
               }}
             >
               {plan.description}
