@@ -9,12 +9,13 @@ This project is a [Next.js](https://nextjs.org) application that leverages the [
 
 ## Key Features
 
-- **AI-Powered Diagramming**: Simply describe a complex system, workflow, or idea, and let the AI generate the corresponding Mermaid diagram.
-- **Multi-Chart Generation**: From a single high-level prompt, the AI planner can break down the request and generate a whole dashboard of related diagrams.
-- **Highly Configurable**: Easily customize the AI models used for different tasks (planning vs. generation) through environment variables.
-- **Self-Correcting Syntax**: Includes an API endpoint that attempts to automatically fix any invalid Mermaid syntax returned by the AI, improving reliability.
-- **Real-time Streaming**: Diagram code is streamed to the client as it's generated, providing a responsive and interactive experience.
-- **Modern Tech Stack**: Built with Next.js, Vercel AI SDK, and styled with the beautiful [shadcn/ui](https://ui.shadcn.com/) component library.
+- **AI-Powered Diagramming**: Describe a complex system, workflow, or idea in natural language.
+- **Multi-Chart Generation**: An AI planner breaks down high-level prompts to generate multiple, related diagrams in one go.
+- **Chart History**: Automatically saves sessions to local storage. Revisit your creations anytime via a unique URL.
+- **Self-Correcting Syntax**: An API endpoint automatically fixes invalid Mermaid syntax, improving reliability.
+- **Real-time Streaming**: Diagram code is streamed to the client as it's generated for a responsive experience.
+- **Polished, Animated UI**: A beautiful, minimalist interface with fluid animations powered by Framer Motion.
+- **Highly Configurable**: Customize AI models for different tasks (planning vs. generation) via environment variables.
 
 ## How It Works
 
@@ -25,6 +26,7 @@ The application follows a simple but powerful flow to generate diagrams:
 3.  **Generation Phase**: For each planned chart, the **Mermaid API** (`/api/mermaid`) calls a "fast" model to generate the Mermaid syntax.
 4.  **Syntax Correction**: If the generated syntax is invalid, the frontend can request a fix from the **Fixer API** (`/api/mermaid/fix`), which asks the AI to correct its mistake.
 5.  **Rendering**: The frontend receives the final Mermaid syntax and uses the `mermaid.js` library to render the interactive diagram.
+6.  **Session Saving**: Once all charts are complete, the entire session (prompt + charts) is saved to local storage, and the user is redirected to a unique page for that session.
 
 This entire process is powered by an intelligent `ai-provider` that selects the best AI provider (Google or OpenRouter) based on your configured API keys.
 
@@ -33,7 +35,7 @@ This entire process is powered by an intelligent `ai-provider` that selects the 
 - **Framework**: [Next.js](https://nextjs.org)
 - **AI**: [Vercel AI SDK](https://sdk.vercel.ai/docs), [@ai-sdk/google](https://sdk.vercel.ai/docs/guides/providers/google-gemini), [@openrouter/ai-sdk-provider](https://github.com/OpenRouter/ai-sdk-provider)
 - **Diagramming**: [Mermaid](https://mermaid.js.org/)
-- **UI**: [React](https://react.dev/), [shadcn/ui](https://ui.shadcn.com/), [Tailwind CSS](https://tailwindcss.com/)
+- **UI**: [React](https://react.dev/), [shadcn/ui](https://ui.shadcn.com/), [Tailwind CSS](https://tailwindcss.com/), [Framer Motion](https://www.framer.com/motion/)
 - **Schema & Validation**: [Zod](https://zod.dev/), [@t3-oss/env-nextjs](https://env.t3.gg/)
 - **Icons**: [Lucide React](https://lucide.dev/guide/packages/lucide-react)
 
