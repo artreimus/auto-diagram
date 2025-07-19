@@ -304,7 +304,7 @@ export function GeneratedChart({
             transition={{ duration: 0.4, delay: 0.2 }}
             className='mt-6 text-monochrome-silver font-light tracking-wide text-sm'
           >
-            Generating visualization
+            {isPlanning ? 'Waiting for plan...' : 'Generating visualization'}
           </motion.span>
         </motion.div>
       )}
