@@ -42,11 +42,13 @@ export function GeneratedChart({
   planId,
   onComplete,
   originalUserMessage,
+  isPlanning,
 }: {
   plan: DeepPartial<ChartPlan>;
   planId: number;
   onComplete: (id: number, chartData: HistoryChart) => void;
   originalUserMessage: string;
+  isPlanning: boolean;
 }) {
   const [currentChart, setCurrentChart] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
@@ -81,7 +83,8 @@ export function GeneratedChart({
       plan.type &&
       plan.description &&
       !isLoadingInitialChart &&
-      !initialChart
+      !initialChart &&
+      !isPlanning
     ) {
       submitInitialChart({
         messages: [{ role: 'user', content: plan.description }],
@@ -97,6 +100,7 @@ export function GeneratedChart({
     isLoadingInitialChart,
     initialChart,
     originalUserMessage,
+    isPlanning,
   ]);
 
   useEffect(() => {

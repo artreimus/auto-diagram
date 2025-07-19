@@ -322,6 +322,7 @@ export default function DemoPage() {
                             planId={index}
                             onComplete={handleChartComplete}
                             originalUserMessage={prompt}
+                            isPlanning={isPlanning}
                           />
                         </motion.div>
                       ) : null
