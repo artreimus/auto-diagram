@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import MermaidDiagram from '@/app/components/MermaidDiagram';
-import { HistorySession } from '@/app/lib/history';
+import { HistorySession, FixAttempt } from '@/app/lib/history';
 
 const MinimalLoadingSpinner = () => (
   <div
@@ -38,6 +38,44 @@ export default function SessionPage() {
   const [session, setSession] = useState<HistorySession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Handle manual fix success and update localStorage
+  const handleManualFixSuccess = (
+    chartIndex: number,
+    updatedChart: string,
+    fixAttempts: FixAttempt[]
+  ) => {
+    if (!session) return;
+
+    const updatedSession = { ...session };
+    if (updatedSession.charts[chartIndex]?.mermaid) {
+      updatedSession.charts[chartIndex].mermaid.chart = updatedChart;
+      updatedSession.charts[chartIndex].fixAttempts = [
+        ...(updatedSession.charts[chartIndex].fixAttempts || []),
+        ...fixAttempts,
+      ];
+    }
+
+    setSession(updatedSession);
+
+    // Update localStorage
+    try {
+      const saved = localStorage.getItem('chart-history');
+      if (saved) {
+        const history: HistorySession[] = JSON.parse(saved);
+        const sessionIndex = history.findIndex((s) => s.id === sessionId);
+        if (sessionIndex !== -1) {
+          history[sessionIndex] = updatedSession;
+          localStorage.setItem('chart-history', JSON.stringify(history));
+
+          // Dispatch event to notify other components
+          window.dispatchEvent(new CustomEvent('chart-history-updated'));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to update localStorage after manual fix:', error);
+    }
+  };
 
   useEffect(() => {
     if (typeof window !== 'undefined' && sessionId) {
@@ -252,6 +290,17 @@ export default function SessionPage() {
                         previousAttempts={[]}
                         showSyntax={false}
                         setShowSyntax={() => {}}
+                        chartType={chart.plan.type}
+                        description={chart.mermaid.description}
+                        originalUserMessage={session.prompt}
+                        planDescription={chart.plan.description}
+                        onManualFixSuccess={(updatedChart, fixAttempts) =>
+                          handleManualFixSuccess(
+                            index,
+                            updatedChart,
+                            fixAttempts
+                          )
+                        }
                       />
                     </motion.div>
                   </>

@@ -59,6 +59,35 @@ export function GeneratedChart({
   const maxRetries = 3;
   const componentId = useMemo(() => nanoid(), []);
 
+  // Handle manual fix success
+  const handleManualFixSuccess = (
+    updatedChart: string,
+    fixAttempts: FixAttempt[]
+  ) => {
+    setCurrentChart(updatedChart);
+    setPreviousAttempts([...previousAttempts, ...fixAttempts]);
+    setLastError(null);
+
+    // Update the result data to include manual fixes
+    const updatedChartData: HistoryChart = {
+      plan: plan as ChartPlan,
+      mermaid:
+        initialChart || fixedChart
+          ? {
+              type: (initialChart || fixedChart)!.type!,
+              description: (initialChart || fixedChart)!.description!,
+              chart: updatedChart,
+              explanation: (initialChart || fixedChart)!.explanation,
+            }
+          : undefined,
+      fixAttempts: [...previousAttempts, ...fixAttempts],
+      finalError: null,
+    };
+
+    // Call onComplete to update the parent component and localStorage
+    onComplete(planId, updatedChartData);
+  };
+
   const {
     object: initialChart,
     error: initialChartError,
@@ -183,10 +212,10 @@ export function GeneratedChart({
   ]);
 
   const handleRenderError = (errorMessage: string) => {
+    // Always set the last error so the error state shows
+    setLastError(errorMessage);
+
     if (isLoadingFix || retryCount >= maxRetries) {
-      if (retryCount >= maxRetries) {
-        setLastError(errorMessage);
-      }
       return;
     }
 
@@ -347,6 +376,11 @@ export function GeneratedChart({
             previousAttempts={previousAttempts}
             showSyntax={showSyntax}
             setShowSyntax={setShowSyntax}
+            chartType={plan.type}
+            description={initialChart?.description}
+            originalUserMessage={originalUserMessage}
+            planDescription={plan.description}
+            onManualFixSuccess={handleManualFixSuccess}
           />
         </motion.div>
       ) : (
