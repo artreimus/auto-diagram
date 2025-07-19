@@ -104,7 +104,7 @@ export default function DemoPage() {
     if (allChartsCompleted) {
       const newSession: HistorySession = {
         id: nanoid(),
-        messages: [{ role: 'user', content: prompt }],
+        prompt: prompt,
         createdAt: new Date().toISOString(),
         charts: Array.from(completedCharts.values()),
       };
@@ -321,6 +321,7 @@ export default function DemoPage() {
                             plan={plan}
                             planId={index}
                             onComplete={handleChartComplete}
+                            originalUserMessage={prompt}
                           />
                         </motion.div>
                       ) : null

@@ -1,5 +1,5 @@
 import { streamObject } from 'ai';
-import { mermaidSchema } from '../schema';
+import { mermaidSchema, mermaidFixRequestSchema } from '../schema';
 import { createAIModel } from '@/lib/ai-provider';
 import { env } from '@/env.mjs';
 
@@ -12,25 +12,25 @@ interface FixAttempt {
 }
 
 export async function POST(req: Request) {
+  const body = await req.json();
+
+  // Validate the request using the new schema
+  const validation = mermaidFixRequestSchema.safeParse(body);
+  if (!validation.success) {
+    return new Response(`Invalid request format: ${validation.error.message}`, {
+      status: 400,
+    });
+  }
+
   const {
     chart,
     error,
     chartType,
     description,
-    previousAttempts = [],
-  }: {
-    chart: string;
-    error: string;
-    chartType: string;
-    description?: string;
-    previousAttempts?: FixAttempt[];
-  } = await req.json();
-
-  if (!chart || !error || !chartType) {
-    return new Response('Missing required fields: chart, error, chartType', {
-      status: 400,
-    });
-  }
+    originalUserMessage,
+    planDescription,
+    previousAttempts,
+  } = validation.data;
 
   const previousAttemptsContext =
     previousAttempts.length > 0
@@ -47,25 +47,42 @@ export async function POST(req: Request) {
           )}\n\nDO NOT repeat these same approaches. Learn from these failures and try a different approach.`
       : '';
 
-  const systemPrompt = `
-You are an expert at debugging and fixing Mermaid diagram syntax errors.
-You will be given a broken Mermaid chart, the error message, and the intended chart type and description.
-Your job is to fix the syntax errors and return a corrected Mermaid chart.
+  // Enhanced context section for better understanding
+  const contextSection =
+    originalUserMessage && planDescription
+      ? `
 
-IMPORTANT RULES:
-1. Keep the overall structure and content as close to the original as possible
-2. Only fix syntax errors, don't change the logic or content unless necessary
-3. Ensure the chart type matches the specified type: "${chartType}"
-4. The chart must be valid Mermaid syntax that will render without errors
-5. Use proper escaping for special characters
-6. Follow Mermaid best practices for the chart type
-7. ALWAYS provide a clear explanation of what was wrong and how you fixed it
+ORIGINAL USER CONTEXT:
+The user originally asked: "${originalUserMessage}"
+
+SPECIFIC CHART PLAN:
+This chart should fulfill: "${planDescription}"
+
+CRITICAL: This is a SYNTAX FIX operation. DO NOT change the content, logic, or meaning of the chart. Only fix syntax errors to make it render properly while preserving the original intent.`
+      : '';
+
+  const systemPrompt = `You are an expert at debugging and fixing Mermaid diagram syntax errors.
+You will be given a broken Mermaid chart, the error message, and the intended chart type and description.
+Your job is to fix ONLY the syntax errors and return a corrected Mermaid chart.${contextSection}
+
+CONTEXT GUIDANCE:
+- The "ORIGINAL PLAN DESCRIPTION" shows what the user originally wanted this chart to accomplish  
+- The "CURRENT CHART DESCRIPTION" shows what the mermaid generator thought it was creating
+- Your job is to fix syntax ONLY while ensuring the chart fulfills BOTH the original plan and current description
+
+CRITICAL RULES FOR SYNTAX FIXING:
+1. PRESERVE ORIGINAL CONTENT: Keep the overall structure, logic, and content EXACTLY as intended
+2. FIX SYNTAX ONLY: Only correct syntax errors, don't change the meaning or add/remove content
+3. MAINTAIN CHART TYPE: Ensure the chart type matches the specified type: "${chartType}"
+4. VALID MERMAID: The chart must be valid Mermaid syntax that will render without errors
+5. NO CONTENT CHANGES: Do not alter node names, relationships, or flow logic unless they cause syntax errors
+6. PRESERVE INTENT: The fixed chart should accomplish exactly the same visualization goal as the broken one
 
 You must respond with a JSON object containing exactly four fields:
 - "type": the chart type (must be "${chartType}")
-- "description": the description of what the chart shows
-- "chart": the corrected Mermaid diagram code
-- "explanation": a clear explanation of what syntax errors were found and how you fixed them
+- "description": the description of what the chart shows (keep original intent)
+- "chart": the corrected Mermaid diagram code with ONLY syntax fixes
+- "explanation": a clear explanation of ONLY the syntax errors you found and how you fixed them
 
 Common Mermaid syntax issues to watch for:
 - Missing or incorrect chart type declarations
@@ -90,11 +107,16 @@ Error encountered:
 ${error}
 
 Chart should be of type: ${chartType}
-Chart description: ${description || 'Not provided'}
+
+ORIGINAL PLAN DESCRIPTION: 
+${planDescription || 'Not provided'}
+
+CURRENT CHART DESCRIPTION (from mermaid generation):
+${description || 'Not provided'}
+
 ${previousAttemptsContext}
 
-Analyze the error, understand what syntax rules were violated, and provide a corrected version with a detailed explanation of your fixes.
-`;
+Remember: This is SYNTAX REPAIR ONLY. Fix the code to render properly while preserving ALL original content and intent.`;
 
   const result = streamObject({
     schema: mermaidSchema,
@@ -103,9 +125,9 @@ Analyze the error, understand what syntax rules were violated, and provide a cor
     messages: [
       {
         role: 'user',
-        content: `Please fix this broken Mermaid chart. The error was: ${error}${
+        content: `Please fix ONLY the syntax errors in this Mermaid chart. Do not change the content or meaning. The error was: ${error}${
           previousAttempts.length > 0
-            ? `\n\nThis is attempt ${previousAttempts.length + 1}. Previous attempts have failed, so please try a different approach.`
+            ? `\n\nThis is attempt ${previousAttempts.length + 1}. Previous syntax fix attempts have failed, so please try a different technical approach to fix the syntax while keeping the content identical.`
             : ''
         }`,
       },

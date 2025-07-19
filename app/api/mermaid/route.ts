@@ -1,13 +1,24 @@
 import { streamObject } from 'ai';
 import { supportedChartTypes } from '@/lib/chart-types';
-import { mermaidSchema } from './schema';
+import { mermaidSchema, mermaidRequestSchema } from './schema';
 import { createAIModel } from '@/lib/ai-provider';
 import { env } from '@/env.mjs';
 
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
-  const { messages, chartType } = await req.json();
+  const body = await req.json();
+
+  // Validate the request using the new schema
+  const validation = mermaidRequestSchema.safeParse(body);
+  if (!validation.success) {
+    return new Response(`Invalid request format: ${validation.error.message}`, {
+      status: 400,
+    });
+  }
+
+  const { messages, chartType, originalUserMessage, planDescription } =
+    validation.data;
 
   if (!supportedChartTypes.includes(chartType)) {
     return new Response(`Unsupported chart type: ${chartType}`, {
@@ -15,11 +26,24 @@ export async function POST(req: Request) {
     });
   }
 
-  const systemPrompt = `
-You are an expert at creating Mermaid diagrams.
+  // Enhanced system prompt that includes context awareness
+  const contextSection =
+    originalUserMessage && planDescription
+      ? `
+
+ORIGINAL USER CONTEXT:
+The user originally asked: "${originalUserMessage}"
+
+SPECIFIC CHART PLAN:
+This chart should fulfill: "${planDescription}"
+
+IMPORTANT: Your chart must directly address the original user's question while specifically implementing the chart plan described above. Stay true to the original user's intent and the planned chart scope.`
+      : '';
+
+  const systemPrompt = `You are an expert at creating Mermaid diagrams.
 You are a generator agent that creates a Mermaid chart based on the user's request.
 Based on the user's request, you will generate a Mermaid chart and a short description of it.
-The chart type must be "${chartType}".
+The chart type must be "${chartType}".${contextSection}
 
 You must respond with a JSON object containing exactly three fields:
 - "type": the chart type (must be "${chartType}")
