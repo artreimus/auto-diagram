@@ -102,7 +102,7 @@ export default function SessionPage() {
           initial={{ opacity: 0, y: 32 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: 'easeOut' }}
-          className='container mx-auto px-6 py-16'
+          className='w-full mx-auto px-6 py-16'
         >
           {/* Session header */}
           <div className='mb-8'>

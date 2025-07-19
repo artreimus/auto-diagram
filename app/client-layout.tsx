@@ -120,7 +120,7 @@ export function ClientLayout({ children }: ClientLayoutProps) {
 
   return (
     <SidebarProvider>
-      <div className='flex min-h-screen bg-monochrome-pure-black text-monochrome-pure-white antialiased'>
+      <div className='flex min-h-screen w-full bg-monochrome-pure-black text-monochrome-pure-white antialiased'>
         <HistorySidebar
           sessions={history}
           selectedSessionId={currentSessionId}
