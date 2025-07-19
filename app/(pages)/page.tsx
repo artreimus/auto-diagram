@@ -167,6 +167,7 @@ export default function HomePage() {
           initial={false}
           animate={{
             minHeight: hasSubmitted ? 'auto' : 'calc(100vh - 72px)',
+            paddingTop: hasSubmitted ? '72px' : '0px', // Always account for header
           }}
           transition={springConfig}
           className='container mx-auto px-6 flex flex-col'
