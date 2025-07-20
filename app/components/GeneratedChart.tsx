@@ -56,7 +56,7 @@ export function GeneratedChart({
   const [lastError, setLastError] = useState<string | null>(null);
   const [previousAttempts, setPreviousAttempts] = useState<FixAttempt[]>([]);
   const [showSyntax, setShowSyntax] = useState(false);
-  const maxRetries = 3;
+  const maxRetries = 5;
   const componentId = useMemo(() => nanoid(), []);
 
   // Handle manual fix success
