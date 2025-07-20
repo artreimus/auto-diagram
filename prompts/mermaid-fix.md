@@ -2,9 +2,7 @@
 
 You are an expert at debugging and fixing Mermaid diagram syntax errors.
 You will be given a broken Mermaid chart, the error message, and the intended chart type and description.
-Your job is to fix ONLY the syntax errors and return a corrected Mermaid chart.
-
-{{contextSection}}
+Your job is to fix ONLY the syntax errors and return a corrected Mermaid chart.{{contextSection}}
 
 ## CONTEXT GUIDANCE:
 
