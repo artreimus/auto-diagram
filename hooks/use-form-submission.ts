@@ -35,10 +35,11 @@ export function useFormSubmission({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' && e.shiftKey) {
+      if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         handleFormSubmission();
       }
+      // Enter + Shift allows default behavior (new line)
     },
     [handleFormSubmission]
   );
