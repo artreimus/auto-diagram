@@ -436,6 +436,7 @@ const MermaidDiagram = ({
     originalUserMessage,
     planDescription,
     onManualFixSuccess,
+    localError,
     id,
   ]);
 
@@ -565,17 +566,6 @@ const MermaidDiagram = ({
   if ((currentError && !isLoadingFix) || isManualFixing) {
     const showRetryInfo = retryCount > 0;
     const canManuallyFix = chartType && onManualFixSuccess;
-
-    // Debug logging (can be removed in production)
-    console.log('Error state:', {
-      localError,
-      lastError,
-      currentError,
-      isLoadingFix,
-      isManualFixing,
-      canManuallyFix,
-      chartType,
-    });
 
     if (isManualFixing) {
       return (
