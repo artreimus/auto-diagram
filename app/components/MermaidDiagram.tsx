@@ -192,6 +192,22 @@ const MermaidDiagram = ({
     });
   }, []);
 
+  // Fallback SVG download
+  const downloadSvgFallback = useCallback(
+    (svgString: string) => {
+      const blob = new Blob([svgString], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `visualization-${id}.svg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    },
+    [id]
+  );
+
   // Download chart as PNG with sophisticated styling
   const downloadChart = useCallback(() => {
     const svgElement = containerRef.current?.querySelector('svg');
@@ -296,23 +312,7 @@ const MermaidDiagram = ({
       const svgData = new XMLSerializer().serializeToString(svgElement);
       downloadSvgFallback(svgData);
     }
-  }, [id]);
-
-  // Fallback SVG download
-  const downloadSvgFallback = useCallback(
-    (svgString: string) => {
-      const blob = new Blob([svgString], { type: 'image/svg+xml' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `visualization-${id}.svg`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    },
-    [id]
-  );
+  }, [id, downloadSvgFallback]);
 
   // Copy syntax with elegant feedback
   const copySyntax = useCallback(async () => {
