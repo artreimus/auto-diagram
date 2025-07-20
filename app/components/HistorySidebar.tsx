@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Clock, FileText, Calendar, ChartBar } from 'lucide-react';
+import { Clock, FileText, Calendar } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -15,6 +15,7 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { HistorySession } from '@/app/lib/history';
+import { AutoDiagramLogo } from './AutoDiagramLogo';
 
 interface HistorySidebarProps {
   sessions: HistorySession[];
@@ -74,7 +75,7 @@ export function HistorySidebar({
             onClick={onNewSession}
             className='flex items-center space-x-2 hover:bg-monochrome-pure-white/5 rounded-lg px-2 py-1 transition-colors duration-200'
           >
-            <ChartBar className='w-5 h-5 text-monochrome-pure-white' />
+            <AutoDiagramLogo className='w-5 h-5 text-monochrome-pure-white' />
             <h2 className='text-lg font-light text-monochrome-pure-white tracking-tight'>
               Auto Diagram
             </h2>

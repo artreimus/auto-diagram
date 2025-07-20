@@ -16,6 +16,7 @@ import {
   historySessionSchema,
 } from '@/app/lib/history';
 import { nanoid } from 'nanoid';
+import { AutoDiagramLogo } from '../components/AutoDiagramLogo';
 
 // Animation configurations - inspired by Apple's fluid motion
 const springConfig = {
@@ -188,9 +189,12 @@ export default function HomePage() {
                   transition={{ duration: 0.8, ease: 'easeOut' }}
                   className='text-center mb-12'
                 >
-                  <h1 className='text-4xl md:text-5xl font-light tracking-tight mb-4 text-monochrome-pure-white'>
-                    Auto Diagram
-                  </h1>
+                  <div className='flex items-center justify-center gap-4 mb-4'>
+                    <AutoDiagramLogo className='w-12 h-12 md:w-16 md:h-16 text-monochrome-pure-white' />
+                    <h1 className='text-4xl md:text-5xl font-light tracking-tight text-monochrome-pure-white'>
+                      Auto Diagram
+                    </h1>
+                  </div>
                   <p className='text-lg font-light text-monochrome-silver tracking-wide'>
                     Visualize anything with AI
                   </p>
