@@ -38,6 +38,17 @@ export default function SessionPage() {
   const [session, setSession] = useState<HistorySession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showSyntaxMap, setShowSyntaxMap] = useState<Record<number, boolean>>(
+    {}
+  );
+
+  // Helper functions to manage syntax display state
+  const getShowSyntax = (chartIndex: number) =>
+    showSyntaxMap[chartIndex] || false;
+
+  const setShowSyntax = (chartIndex: number, show: boolean) => {
+    setShowSyntaxMap((prev) => ({ ...prev, [chartIndex]: show }));
+  };
 
   // Handle manual fix success and update localStorage
   const handleManualFixSuccess = (
@@ -288,8 +299,8 @@ export default function SessionPage() {
                         maxRetries={0}
                         lastError={null}
                         previousAttempts={[]}
-                        showSyntax={false}
-                        setShowSyntax={() => {}}
+                        showSyntax={getShowSyntax(index)}
+                        setShowSyntax={(show) => setShowSyntax(index, show)}
                         chartType={chart.plan.type}
                         description={chart.mermaid.description}
                         originalUserMessage={session.prompt}
