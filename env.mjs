@@ -9,7 +9,7 @@ export const env = createEnv({
       .enum([AIProvider.GOOGLE, AIProvider.OPENROUTER])
       .default(AIProvider.GOOGLE),
 
-    OPENROUTER_API_KEY: z.string().min(1),
+    OPENROUTER_API_KEY: z.string().optional(),
     GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),
 
     // Model configuration

@@ -77,25 +77,31 @@ The application should now be running at [http://localhost:3000](http://localhos
 
 The application uses environment variables for configuration, validated by [@t3-oss/env-nextjs](https://env.t3.gg/).
 
-### Provider Priority
+### Provider Selection
 
-1.  **Google Gemini** (Primary): Used if `GOOGLE_GENERATIVE_AI_API_KEY` is set.
-2.  **OpenRouter** (Fallback): Used if the Google API key is not available.
+You can choose between two AI providers by setting the appropriate API key:
+
+1.  **Google Gemini**: Used if `GOOGLE_GENERATIVE_AI_API_KEY` is set.
+2.  **OpenRouter**: Used if `OPENROUTER_API_KEY` is set.
+
+If both keys are provided, Google Gemini will be used as the primary provider based on the default `AI_PROVIDER` setting.
 
 ### Required Variables
 
 ```env
 # At least one API key is required for the app to function.
-# You can get a key from https://openrouter.ai/
+# Choose either Google Gemini OR OpenRouter (or both)
+
+# Option 1: Use Google Gemini (get a key from https://ai.google.dev/)
+GOOGLE_GENERATIVE_AI_API_KEY="your-google-ai-api-key"
+
+# Option 2: Use OpenRouter (get a key from https://openrouter.ai/)
 OPENROUTER_API_KEY="your-openrouter-api-key"
 ```
 
 ### Optional Variables
 
 ```env
-# If provided, Google Gemini will be used as the primary provider.
-# Get a key from https://ai.google.dev/
-GOOGLE_GENERATIVE_AI_API_KEY="your-google-ai-api-key"
 
 # --- Model Configuration ---
 # You can override the default models with any compatible model from
