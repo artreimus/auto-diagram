@@ -6,7 +6,7 @@ import { experimental_useObject as useObject } from '@ai-sdk/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 
 import { chartPlanSchema as plannerSchema } from '@/app/api/planner/schema';
 import { GeneratedChart } from '../components/GeneratedChart';
@@ -72,7 +72,7 @@ export default function HomePage() {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!prompt.trim()) return;
+    if (!prompt.trim() || isProcessing) return;
 
     // Create a new session ID immediately
     const sessionId = nanoid();
@@ -82,6 +82,9 @@ export default function HomePage() {
     setHasSaved(false);
     submit({ messages: [{ role: 'user', content: prompt }] });
   };
+
+  // Track if the entire process is still running (planning + chart generation)
+  const isProcessing = isPlanning || (hasSubmitted && !hasSaved);
 
   const handleChartComplete = useCallback(
     (id: number, chartData: HistoryChart) => {
@@ -197,14 +200,28 @@ export default function HomePage() {
               {/* The sacred input - minimalist perfection */}
               <form onSubmit={handleSubmit} className='relative'>
                 <div className='relative'>
-                  <Input
-                    type='text'
+                  <Textarea
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
                     placeholder='Ask me anything…'
-                    className='w-full text-base font-medium tracking-tight text-monochrome-pure-white placeholder:text-monochrome-ash bg-transparent border border-monochrome-pewter/30 focus:border-monochrome-pure-white/60 hover:border-monochrome-pearl/40 rounded-2xl px-6 py-4 transition-all duration-300 ease-out focus:outline-none focus:ring-0 shadow-micro backdrop-blur-sm'
-                    disabled={isPlanning}
+                    className='w-full text-base font-medium tracking-tight text-monochrome-pure-white placeholder:text-monochrome-ash bg-transparent border border-monochrome-pewter/30 focus:border-monochrome-pure-white/60 hover:border-monochrome-pearl/40 rounded-2xl px-6 py-4 pr-12 transition-all duration-300 ease-out focus:outline-none focus:ring-0 shadow-micro backdrop-blur-sm min-h-[3.5rem] max-h-48 resize-none scrollbar-thin scrollbar-track-transparent scrollbar-thumb-monochrome-pewter/30 hover:scrollbar-thumb-monochrome-pewter/50'
+                    disabled={isProcessing}
                     autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && e.shiftKey) {
+                        e.preventDefault();
+                        if (prompt.trim() && !isProcessing) {
+                          const sessionId = nanoid();
+                          setCurrentSessionId(sessionId);
+                          setHasSubmitted(true);
+                          setCompletedCharts(new Map());
+                          setHasSaved(false);
+                          submit({
+                            messages: [{ role: 'user', content: prompt }],
+                          });
+                        }
+                      }
+                    }}
                   />
 
                   {/* Hairline inner glow on focus */}
@@ -215,30 +232,45 @@ export default function HomePage() {
 
                 {/* Submit affordance - only show when there's content */}
                 <AnimatePresence>
-                  {prompt.trim() && !isPlanning && (
+                  {prompt.trim() && !isProcessing && (
                     <motion.div
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ duration: 0.2 }}
-                      className='absolute right-2 top-1/2 -translate-y-1/2'
+                      className='absolute right-2 top-1/2 -translate-y-1/2 z-10'
                     >
                       <Button
                         type='submit'
-                        className='rounded-xl px-4 py-2 text-sm font-medium text-monochrome-pure-white bg-transparent hover:bg-monochrome-pure-white/5 transition-all duration-200'
+                        className='rounded-xl px-3 py-2 text-lg font-medium text-monochrome-pure-white bg-transparent hover:bg-monochrome-pure-white/10 transition-all duration-200 leading-none'
                       >
-                        ↗
+                        <svg
+                          width='16'
+                          height='16'
+                          viewBox='0 0 24 24'
+                          fill='none'
+                          xmlns='http://www.w3.org/2000/svg'
+                          className='rotate-45'
+                        >
+                          <path
+                            d='M5 12h14M12 5l7 7-7 7'
+                            stroke='currentColor'
+                            strokeWidth='2'
+                            strokeLinecap='round'
+                            strokeLinejoin='round'
+                          />
+                        </svg>
                       </Button>
                     </motion.div>
                   )}
                 </AnimatePresence>
 
                 {/* Elegant loading state */}
-                {isPlanning && (
+                {isProcessing && (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className='absolute right-6 top-1/2 -translate-y-1/2'
+                    className='absolute right-6 top-1/2 -translate-y-1/2 z-10'
                   >
                     <MinimalLoadingSpinner />
                   </motion.div>
@@ -269,8 +301,8 @@ export default function HomePage() {
                 </motion.div>
               )}
 
-              {/* Planning state - minimal and sophisticated */}
-              {isPlanning && !hasResults && !error && (
+              {/* Processing state - minimal and sophisticated */}
+              {isProcessing && !hasResults && !error && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -279,7 +311,7 @@ export default function HomePage() {
                   <div className='flex items-center space-x-4'>
                     <MinimalLoadingSpinner />
                     <span className='text-monochrome-silver font-light tracking-wide'>
-                      Planning
+                      {isPlanning ? 'Planning' : 'Generating'}
                     </span>
                   </div>
                 </motion.div>
