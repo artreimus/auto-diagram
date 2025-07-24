@@ -4,8 +4,6 @@ import { createAIModel } from '@/lib/ai-provider';
 import { env } from '@/env.mjs';
 import { createPlannerPrompt } from '@/lib/prompt-utils';
 
-export const maxDuration = 30;
-
 export async function POST(req: Request) {
   const { messages } = await req.json();
 

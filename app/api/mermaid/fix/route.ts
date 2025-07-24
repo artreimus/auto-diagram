@@ -4,7 +4,6 @@ import { createAIModel } from '@/lib/ai-provider';
 import { env } from '@/env.mjs';
 import { createMermaidFixPrompt } from '@/lib/prompt-utils';
 
-export const maxDuration = 30;
 
 export async function POST(req: Request) {
   const body = await req.json();
