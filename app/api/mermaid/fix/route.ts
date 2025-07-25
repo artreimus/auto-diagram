@@ -1,9 +1,8 @@
-import { streamObject } from 'ai';
+import { generateObject } from 'ai';
 import { mermaidSchema, mermaidFixRequestSchema } from '../schema';
 import { createAIModel } from '@/lib/ai-provider';
 import { env } from '@/env.mjs';
 import { createMermaidFixPrompt } from '@/lib/prompt-utils';
-
 
 export async function POST(req: Request) {
   const body = await req.json();
@@ -36,9 +35,9 @@ export async function POST(req: Request) {
     previousAttempts
   );
 
-  const result = streamObject({
-    schema: mermaidSchema,
+  const { object: fixedChart } = await generateObject({
     model: createAIModel('reasoning', env.AI_PROVIDER),
+    schema: mermaidSchema,
     system: systemPrompt,
     messages: [
       {
@@ -52,5 +51,5 @@ export async function POST(req: Request) {
     ],
   });
 
-  return result.toTextStreamResponse();
+  return Response.json(fixedChart);
 }
