@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
+import { HistorySession } from '@/app/lib/history';
 import MermaidDiagram from '@/app/components/MermaidDiagram';
-import { HistorySession, FixAttempt } from '@/app/lib/history';
 
 const MinimalLoadingSpinner = () => (
   <div
@@ -32,88 +31,40 @@ const MinimalLoadingSpinner = () => (
   </div>
 );
 
-export default function SessionPage() {
-  const params = useParams();
-  const sessionId = params.id as string;
+export default async function SessionPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+
+  return <SessionContent sessionId={id} />;
+}
+
+function SessionContent({ sessionId }: { sessionId: string }) {
   const [session, setSession] = useState<HistorySession | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [showSyntaxMap, setShowSyntaxMap] = useState<Record<number, boolean>>(
-    {}
-  );
-
-  // Helper functions to manage syntax display state
-  const getShowSyntax = (chartIndex: number) =>
-    showSyntaxMap[chartIndex] || false;
-
-  const setShowSyntax = (chartIndex: number, show: boolean) => {
-    setShowSyntaxMap((prev) => ({ ...prev, [chartIndex]: show }));
-  };
-
-  // Handle manual fix success and update localStorage
-  const handleManualFixSuccess = (
-    chartIndex: number,
-    updatedChart: string,
-    fixAttempts: FixAttempt[]
-  ) => {
-    if (!session) return;
-
-    const updatedSession = { ...session };
-    if (updatedSession.charts[chartIndex]?.mermaid) {
-      updatedSession.charts[chartIndex].mermaid.chart = updatedChart;
-      updatedSession.charts[chartIndex].fixAttempts = [
-        ...(updatedSession.charts[chartIndex].fixAttempts || []),
-        ...fixAttempts,
-      ];
-    }
-
-    setSession(updatedSession);
-
-    // Update localStorage
-    try {
-      const saved = localStorage.getItem('chart-history');
-      if (saved) {
-        const history: HistorySession[] = JSON.parse(saved);
-        const sessionIndex = history.findIndex((s) => s.id === sessionId);
-        if (sessionIndex !== -1) {
-          history[sessionIndex] = updatedSession;
-          localStorage.setItem('chart-history', JSON.stringify(history));
-
-          // Dispatch event to notify other components
-          window.dispatchEvent(new CustomEvent('chart-history-updated'));
-        }
-      }
-    } catch (error) {
-      console.error('Failed to update localStorage after manual fix:', error);
-    }
-  };
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && sessionId) {
+    const loadSession = () => {
       try {
         const saved = localStorage.getItem('chart-history');
         if (saved) {
           const history: HistorySession[] = JSON.parse(saved);
           const foundSession = history.find((s) => s.id === sessionId);
-
-          if (foundSession) {
-            setSession(foundSession);
-          } else {
-            setError('Session not found');
-          }
-        } else {
-          setError('No history found');
+          setSession(foundSession || null);
         }
       } catch (error) {
         console.error('Failed to load session:', error);
-        setError('Failed to load session');
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
-    }
+    };
+
+    loadSession();
   }, [sessionId]);
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className='min-h-screen bg-monochrome-pure-black text-monochrome-pure-white antialiased flex items-center justify-center'>
         <div className='flex items-center space-x-4'>
@@ -126,12 +77,12 @@ export default function SessionPage() {
     );
   }
 
-  if (error || !session) {
+  if (!session) {
     return (
       <div className='min-h-screen bg-monochrome-pure-black text-monochrome-pure-white antialiased flex items-center justify-center'>
         <div className='text-center'>
           <h1 className='text-2xl font-light tracking-tight mb-4 text-monochrome-pure-white'>
-            {error || 'Session not found'}
+            Session not found
           </h1>
           <p className='text-monochrome-silver font-light tracking-wide'>
             The requested session could not be loaded.
@@ -289,29 +240,10 @@ export default function SessionPage() {
                       transition={{ duration: 0.6, ease: 'easeOut' }}
                     >
                       <MermaidDiagram
+                        key={index}
                         id={`session-${session.id}-${index}`}
                         chart={chart.mermaid.chart}
                         onRenderError={() => {}}
-                        isLoadingFix={false}
-                        fixError={null}
-                        fixedChart={undefined}
-                        retryCount={0}
-                        maxRetries={0}
-                        lastError={null}
-                        previousAttempts={[]}
-                        showSyntax={getShowSyntax(index)}
-                        setShowSyntax={(show) => setShowSyntax(index, show)}
-                        chartType={chart.plan.type}
-                        description={chart.mermaid.description}
-                        originalUserMessage={session.prompt}
-                        planDescription={chart.plan.description}
-                        onManualFixSuccess={(updatedChart, fixAttempts) =>
-                          handleManualFixSuccess(
-                            index,
-                            updatedChart,
-                            fixAttempts
-                          )
-                        }
                       />
                     </motion.div>
                   </>

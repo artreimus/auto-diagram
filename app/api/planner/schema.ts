@@ -12,4 +12,10 @@ export const chartPlanSchema = z.object({
 
 export type ChartPlan = z.infer<typeof chartPlanSchema>;
 
+// For backend array streaming: schema for individual elements
+export { chartPlanSchema as plannerElementSchema };
+
+// For frontend: schema for the complete array
 export const plannerSchema = z.array(chartPlanSchema);
+
+export type PlannerResponse = ChartPlan[];
