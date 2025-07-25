@@ -34,6 +34,40 @@ export const mermaidRequestSchema = z.object({
 
 export type MermaidRequest = z.infer<typeof mermaidRequestSchema>;
 
+// Schema for batch mermaid generation requests
+export const batchMermaidRequestSchema = z.object({
+  charts: z.array(
+    z.object({
+      chartType: z.enum(supportedChartTypes),
+      description: z
+        .string()
+        .describe('The description of what the chart should show'),
+      originalUserMessage: z
+        .string()
+        .describe('The original user query that started this session'),
+      planDescription: z
+        .string()
+        .describe('The specific plan description for this chart'),
+    })
+  ),
+});
+
+export type BatchMermaidRequest = z.infer<typeof batchMermaidRequestSchema>;
+
+// Schema for batch mermaid generation responses
+export const batchMermaidResponseSchema = z.object({
+  results: z.array(
+    z.object({
+      success: z.boolean(),
+      chart: mermaidSchema.optional(),
+      error: z.string().optional(),
+      index: z.number(),
+    })
+  ),
+});
+
+export type BatchMermaidResponse = z.infer<typeof batchMermaidResponseSchema>;
+
 // Schema for fix requests that include original context
 export const mermaidFixRequestSchema = z.object({
   chart: z.string().describe('The broken Mermaid chart code'),
