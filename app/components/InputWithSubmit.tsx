@@ -10,7 +10,6 @@ interface InputWithSubmitProps {
   value: string;
   onChange: (value: string) => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
-  onKeyDown: (e: React.KeyboardEvent) => void;
   isProcessing: boolean;
   disabled?: boolean;
   placeholder?: string;
@@ -21,7 +20,6 @@ export const InputWithSubmit = ({
   value,
   onChange,
   onSubmit,
-  onKeyDown,
   isProcessing,
   disabled = false,
   placeholder = 'Ask me anything…',
@@ -36,7 +34,6 @@ export const InputWithSubmit = ({
         className='w-full text-base font-medium tracking-tight text-monochrome-pure-white placeholder:text-monochrome-ash bg-transparent border border-monochrome-pewter/30 focus:border-monochrome-pure-white/60 hover:border-monochrome-pearl/40 rounded-2xl px-6 py-4 pr-12 transition-all duration-300 ease-out focus:outline-none focus:ring-0 shadow-micro backdrop-blur-sm min-h-[3.5rem] max-h-48 resize-none scrollbar-thin scrollbar-track-transparent scrollbar-thumb-monochrome-pewter/30 hover:scrollbar-thumb-monochrome-pewter/50'
         disabled={disabled || isProcessing}
         autoFocus={autoFocus}
-        onKeyDown={onKeyDown}
       />
 
       {/* Hairline inner glow on focus */}

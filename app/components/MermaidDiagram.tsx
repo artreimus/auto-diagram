@@ -3,107 +3,17 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import mermaid from 'mermaid';
-import { mermaidSchema } from '@/app/api/mermaid/schema';
-import { DeepPartial } from 'ai';
 
 type MermaidProps = {
   id: string;
   chart: string;
   onRenderError: (errorMessage: string) => void;
-  isLoadingFix: boolean;
-  fixError: Error | null;
-  fixedChart: DeepPartial<typeof mermaidSchema> | undefined;
-  retryCount: number;
-  maxRetries: number;
-  lastError: string | null;
-  previousAttempts: FixAttempt[];
-  showSyntax: boolean;
-  setShowSyntax: (show: boolean) => void;
-  // Manual fix props
-  chartType?: string;
-  description?: string;
-  originalUserMessage?: string;
-  planDescription?: string;
-  onManualFixSuccess?: (
-    updatedChart: string,
-    fixAttempts: FixAttempt[]
-  ) => void;
 };
 
-interface FixAttempt {
-  chart: string;
-  error: string;
-  explanation?: string;
-}
-
-// Elegant loading animation for fix attempts
-const FixingSpinner = ({
-  attempt,
-  maxRetries,
-}: {
-  attempt: number;
-  maxRetries: number;
-}) => (
-  <motion.div
-    initial={{ opacity: 0, scale: 0.95 }}
-    animate={{ opacity: 1, scale: 1 }}
-    exit={{ opacity: 0, scale: 0.95 }}
-    className='flex items-center justify-center py-16 px-8 border border-monochrome-pewter/20 bg-monochrome-charcoal/10 rounded-2xl backdrop-blur-sm'
-  >
-    <div className='flex items-center space-x-4'>
-      <div className='flex space-x-1'>
-        {[0, 1, 2].map((index) => (
-          <motion.div
-            key={index}
-            className='w-1.5 h-1.5 bg-monochrome-silver rounded-full'
-            animate={{
-              opacity: [0.3, 1, 0.3],
-              scale: [1, 1.4, 1],
-            }}
-            transition={{
-              duration: 1,
-              repeat: Infinity,
-              delay: index * 0.2,
-              ease: 'easeInOut',
-            }}
-          />
-        ))}
-      </div>
-      <span className='text-monochrome-silver font-light tracking-wide text-sm'>
-        Refining syntax{' '}
-        <span className='text-monochrome-ash'>
-          ({attempt}/{maxRetries})
-        </span>
-      </span>
-    </div>
-  </motion.div>
-);
-
-const MermaidDiagram = ({
-  id,
-  chart,
-  onRenderError,
-  isLoadingFix,
-  fixError,
-  fixedChart,
-  retryCount,
-  maxRetries,
-  lastError,
-  previousAttempts,
-  showSyntax,
-  setShowSyntax,
-  chartType,
-  description,
-  originalUserMessage,
-  planDescription,
-  onManualFixSuccess,
-}: MermaidProps) => {
+const MermaidDiagram = ({ id, chart, onRenderError }: MermaidProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [copySuccess, setCopySuccess] = useState(false);
-  const [isManualFixing, setIsManualFixing] = useState(false);
-  const [manualFixAttempts, setManualFixAttempts] = useState<FixAttempt[]>([]);
-  const [currentChart, setCurrentChart] = useState(chart);
-  const [localError, setLocalError] = useState<string | null>(null);
+  const [showSyntax, setShowSyntax] = useState(false);
 
   // Ensure the ID is a valid CSS selector
   const validId = `mermaid-${id.replace(/[^a-zA-Z0-9-_]/g, '').replace(/^[0-9]/, 'n$&')}`;
@@ -317,143 +227,16 @@ const MermaidDiagram = ({
   // Copy syntax with elegant feedback
   const copySyntax = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(currentChart);
+      await navigator.clipboard.writeText(chart);
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);
     } catch (error) {
       console.error('Failed to copy syntax:', error);
     }
-  }, [currentChart]);
-
-  // Manual fix function with unlimited retries
-  const handleManualFix = useCallback(async () => {
-    if (!chartType || isManualFixing) return;
-
-    setIsManualFixing(true);
-    const attempts = [...manualFixAttempts];
-    let chartToFix = currentChart;
-    let lastErrorMessage = localError || lastError || 'Chart rendering failed';
-
-    const tryFix = async (): Promise<void> => {
-      try {
-        // Record the failed attempt
-        const failedAttempt: FixAttempt = {
-          chart: chartToFix,
-          error: lastErrorMessage,
-        };
-        attempts.push(failedAttempt);
-        setManualFixAttempts([...attempts]);
-
-        const response = await fetch('/api/mermaid/fix', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chart: chartToFix,
-            error: lastErrorMessage,
-            chartType,
-            description,
-            originalUserMessage,
-            planDescription,
-            previousAttempts: attempts,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Fix request failed');
-        }
-
-        const reader = response.body?.getReader();
-        if (!reader) throw new Error('No response reader');
-
-        let buffer = '';
-        let fixedData = null;
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += new TextDecoder().decode(value, { stream: true });
-          const lines = buffer.split('\n');
-
-          for (let i = 0; i < lines.length - 1; i++) {
-            const line = lines[i].trim();
-            if (line.startsWith('0:')) {
-              try {
-                const jsonStr = line.substring(2);
-                fixedData = JSON.parse(jsonStr);
-              } catch {
-                // Continue parsing
-              }
-            }
-          }
-          buffer = lines[lines.length - 1];
-        }
-
-        if (fixedData?.chart) {
-          // Update the explanation for the last attempt
-          if (attempts.length > 0 && fixedData.explanation) {
-            attempts[attempts.length - 1].explanation = fixedData.explanation;
-          }
-
-          // Test if the fixed chart renders successfully
-          try {
-            await mermaid.render(`test-${id}-${Date.now()}`, fixedData.chart);
-            // If we get here, the chart renders successfully
-            setCurrentChart(fixedData.chart);
-            setManualFixAttempts(attempts);
-            setIsManualFixing(false);
-            setLocalError(null); // Clear local error on success
-            onManualFixSuccess?.(fixedData.chart, attempts);
-            return;
-          } catch (renderError) {
-            // The fixed chart still has errors, try again
-            chartToFix = fixedData.chart;
-            lastErrorMessage =
-              (renderError as Error).message || String(renderError);
-            // Continue to next attempt
-            await new Promise((resolve) => setTimeout(resolve, 1000)); // Brief delay
-            return tryFix();
-          }
-        } else {
-          throw new Error('No fixed chart received');
-        }
-      } catch (error) {
-        console.error('Manual fix failed:', error);
-        // Try again after a brief delay
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        return tryFix();
-      }
-    };
-
-    await tryFix();
-  }, [
-    chartType,
-    isManualFixing,
-    manualFixAttempts,
-    currentChart,
-    lastError,
-    description,
-    originalUserMessage,
-    planDescription,
-    onManualFixSuccess,
-    localError,
-    id,
-  ]);
-
-  // Update current chart when prop changes
-  useEffect(() => {
-    setCurrentChart(chart);
-    // Clear local error when new chart is provided
-    setLocalError(null);
   }, [chart]);
 
   useEffect(() => {
-    if (!currentChart || !containerRef.current) {
-      return;
-    }
-
-    // Don't try to render if a fix is in progress.
-    if (isLoadingFix || isManualFixing) {
+    if (!chart || !containerRef.current) {
       return;
     }
 
@@ -461,250 +244,32 @@ const MermaidDiagram = ({
     containerRef.current.innerHTML = '';
 
     mermaid
-      .render(validId, currentChart)
+      .render(validId, chart)
       .then(({ svg, bindFunctions }) => {
-        if (
-          containerRef.current &&
-          !isStale &&
-          !isLoadingFix &&
-          !isManualFixing
-        ) {
+        if (containerRef.current && !isStale) {
           containerRef.current.innerHTML = svg;
           if (bindFunctions) {
             bindFunctions(containerRef.current);
           }
-          // Clear local error on successful render
-          setLocalError(null);
         }
       })
       .catch((error) => {
-        if (isStale || isLoadingFix || isManualFixing) {
+        if (isStale) {
           return;
         }
 
         const errorMessage =
           error?.message || String(error) || 'Chart rendering failed';
         console.error('Error rendering visualization:', error);
-        setLocalError(errorMessage);
         onRenderError(errorMessage);
       });
     return () => {
       isStale = true;
     };
-  }, [validId, currentChart, isLoadingFix, isManualFixing, onRenderError]);
-
-  // Show fixing state
-  if (isLoadingFix) {
-    return <FixingSpinner attempt={retryCount} maxRetries={maxRetries} />;
-  }
-
-  // Show fix submission error
-  if (fixError && !isLoadingFix) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className='border border-monochrome-steel/30 bg-monochrome-charcoal/20 rounded-2xl p-6 backdrop-blur-sm'
-      >
-        <div className='flex items-start space-x-3 mb-4'>
-          <div className='w-1.5 h-1.5 bg-monochrome-ash rounded-full mt-2 flex-shrink-0' />
-          <div>
-            <p className='text-monochrome-cloud font-medium mb-1'>
-              Refinement process encountered an issue
-            </p>
-            <p className='text-sm text-monochrome-silver font-light mb-2'>
-              Fix error: {fixError?.message || 'Unknown error'}
-            </p>
-            <p className='text-sm text-monochrome-ash font-light'>
-              Original error: {lastError}
-            </p>
-          </div>
-        </div>
-
-        {previousAttempts.length > 0 && (
-          <details className='mt-4'>
-            <summary className='text-sm cursor-pointer hover:text-monochrome-cloud transition-colors font-medium text-monochrome-silver'>
-              Previous refinement attempts ({previousAttempts.length})
-            </summary>
-            <div className='mt-3 space-y-3 max-h-40 overflow-auto'>
-              {previousAttempts.map((attempt, index) => (
-                <div
-                  key={index}
-                  className='bg-monochrome-graphite/20 p-3 rounded-xl'
-                >
-                  <p className='font-medium text-sm text-monochrome-cloud'>
-                    Attempt {index + 1}:
-                  </p>
-                  <p className='text-xs text-monochrome-silver mt-1'>
-                    Error: {attempt.error}
-                  </p>
-                  {attempt.explanation && (
-                    <p className='text-xs text-monochrome-ash mt-1'>
-                      Strategy: {attempt.explanation}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </details>
-        )}
-
-        <details className='mt-4'>
-          <summary className='text-sm cursor-pointer hover:text-monochrome-cloud transition-colors font-medium text-monochrome-silver'>
-            View source code
-          </summary>
-          <pre className='mt-3 text-xs whitespace-pre-wrap bg-monochrome-graphite/20 p-4 rounded-xl font-mono text-monochrome-pearl'>
-            {chart}
-          </pre>
-        </details>
-      </motion.div>
-    );
-  }
-
-  // Final error state after retries
-  const currentError = localError || lastError;
-  if ((currentError && !isLoadingFix) || isManualFixing) {
-    const showRetryInfo = retryCount > 0;
-    const canManuallyFix = chartType && onManualFixSuccess;
-
-    if (isManualFixing) {
-      return (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className='flex items-center justify-center py-16 px-8 border border-monochrome-pewter/20 bg-monochrome-charcoal/10 rounded-2xl backdrop-blur-sm'
-        >
-          <div className='flex items-center space-x-4'>
-            <div className='flex space-x-1'>
-              {[0, 1, 2].map((index) => (
-                <motion.div
-                  key={index}
-                  className='w-1.5 h-1.5 bg-monochrome-silver rounded-full'
-                  animate={{
-                    opacity: [0.3, 1, 0.3],
-                    scale: [1, 1.4, 1],
-                  }}
-                  transition={{
-                    duration: 1,
-                    repeat: Infinity,
-                    delay: index * 0.2,
-                    ease: 'easeInOut',
-                  }}
-                />
-              ))}
-            </div>
-            <span className='text-monochrome-silver font-light tracking-wide text-sm'>
-              Fixing syntax manually
-              {manualFixAttempts.length > 0 && (
-                <span className='text-monochrome-ash'>
-                  {' '}
-                  ({manualFixAttempts.length} attempts)
-                </span>
-              )}
-            </span>
-          </div>
-        </motion.div>
-      );
-    }
-
-    return (
-      <div className='text-monochrome-silver p-6 border border-monochrome-pewter/30 bg-monochrome-charcoal/10 rounded-2xl backdrop-blur-sm'>
-        <p className='font-medium text-monochrome-cloud mb-2'>
-          Visualization Error
-          {showRetryInfo ? ` (after ${retryCount} refinement attempts)` : ''}
-        </p>
-        <p className='text-sm mb-4 font-light'>{currentError}</p>
-
-        {canManuallyFix && (
-          <div className='mb-4'>
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleManualFix}
-              className='text-sm text-monochrome-pure-white hover:text-monochrome-cloud font-medium tracking-wide px-4 py-2 rounded-xl border border-monochrome-silver/40 hover:border-monochrome-cloud/60 bg-monochrome-graphite/30 hover:bg-monochrome-slate-dark/40 transition-all duration-200 backdrop-blur-sm'
-            >
-              Try Manual Fix
-            </motion.button>
-          </div>
-        )}
-
-        {showRetryInfo ? (
-          <p className='text-xs text-monochrome-ash mb-4'>
-            Auto-refinement attempts exhausted.
-            {canManuallyFix &&
-              ' You can try manual fixing which will retry until successful.'}
-          </p>
-        ) : (
-          ''
-        )}
-
-        {manualFixAttempts.length > 0 && (
-          <details className='mb-4'>
-            <summary className='text-sm cursor-pointer hover:text-monochrome-cloud transition-colors font-medium text-monochrome-silver'>
-              Manual fix attempts ({manualFixAttempts.length})
-            </summary>
-            <div className='mt-3 space-y-3 max-h-40 overflow-auto'>
-              {manualFixAttempts.map((attempt, index) => (
-                <div
-                  key={index}
-                  className='bg-monochrome-graphite/20 p-3 rounded-xl'
-                >
-                  <p className='font-medium text-sm text-monochrome-cloud'>
-                    Manual Attempt {index + 1}:
-                  </p>
-                  <p className='text-xs text-monochrome-silver mt-1'>
-                    Error: {attempt.error}
-                  </p>
-                  {attempt.explanation && (
-                    <p className='text-xs text-monochrome-ash mt-1'>
-                      Strategy: {attempt.explanation}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </details>
-        )}
-
-        <details className='mt-4'>
-          <summary className='text-sm cursor-pointer hover:text-monochrome-cloud transition-colors font-medium'>
-            View source code
-          </summary>
-          <pre className='mt-3 text-xs whitespace-pre-wrap bg-monochrome-graphite/20 p-4 rounded-xl font-mono text-monochrome-pearl'>
-            {currentChart}
-          </pre>
-        </details>
-      </div>
-    );
-  }
+  }, [validId, chart, onRenderError]);
 
   return (
     <div className='space-y-6'>
-      {/* Success message when chart was auto-fixed */}
-      <AnimatePresence>
-        {fixedChart?.explanation && retryCount > 0 && !isLoadingFix && (
-          <motion.div
-            initial={{ opacity: 0, y: -8, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.98 }}
-            transition={{ duration: 0.4, ease: 'easeOut' }}
-            className='border border-monochrome-pewter/30 bg-monochrome-charcoal/10 rounded-2xl p-4 backdrop-blur-sm'
-          >
-            <div className='flex items-start space-x-3'>
-              <div className='w-1.5 h-1.5 bg-monochrome-pearl rounded-full mt-2 flex-shrink-0' />
-              <div>
-                <p className='font-medium text-sm text-monochrome-cloud mb-1'>
-                  Visualization refined (attempt {retryCount})
-                </p>
-                <p className='text-sm text-monochrome-silver font-light'>
-                  {fixedChart.explanation}
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Refined action controls */}
       <div className='flex justify-end gap-3'>
         <motion.button
@@ -749,7 +314,7 @@ const MermaidDiagram = ({
               </motion.button>
             </div>
             <pre className='p-6 text-sm whitespace-pre-wrap font-mono text-monochrome-silver leading-relaxed overflow-auto max-h-80'>
-              {currentChart}
+              {chart}
             </pre>
           </motion.div>
         )}
