@@ -2,14 +2,20 @@ import { z } from 'zod';
 import { chartPlanSchema } from '@/app/api/planner/schema';
 import { ChartSource, ResultStatus } from '@/app/enum/session';
 
-// Chart version represents each iteration (original + fixes)
-export const chartSchema = z.object({
+export const chartsMetadata = z.object({
   version: z.number(), // 1 = original, 2+ = fixes
   chart: z.string(), // the mermaid code of the chart
   rationale: z.string(), // the rationale of the LLM that generated the chart
   createdAt: z.string().datetime(), // ISO timestamp string
   source: z.nativeEnum(ChartSource), // How this version was created
   error: z.string().optional(), // Error that prompted this version (for fixes)
+  status: z.nativeEnum(ResultStatus).default(ResultStatus.PENDING),
+});
+
+// Chart version represents each iteration (original + fixes)
+export const chartSchema = z.object({
+  metadata: z.array(chartsMetadata).default([]),
+  currentVersion: z.number().default(0), // Which version is currently active
   plan: chartPlanSchema,
 });
 
@@ -18,8 +24,6 @@ export const resultSchema = z.object({
   id: z.string().nanoid(), // Unique chart ID within session
   prompt: z.string(), // the user prompt that generated the chart
   charts: z.array(chartSchema).default([]), // All versions (original + fixes)
-  currentVersion: z.number().default(0), // Which version is currently active
-  status: z.nativeEnum(ResultStatus).default(ResultStatus.PENDING),
   createdAt: z.string().datetime(), // ISO timestamp string
   updatedAt: z.string().datetime(), // ISO timestamp string
 });

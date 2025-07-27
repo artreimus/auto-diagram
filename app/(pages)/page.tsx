@@ -33,7 +33,7 @@ export default function HomePage() {
   const plannedChartsRef = useRef<ChartPlan[] | null>(null);
 
   // Session management with event-driven sync
-  const { createSession, addResult } = useSessionManagement();
+  const { createSession, addResult, addChartToResult } = useSessionManagement();
 
   // Pattern 2: Single batch mermaid generation hook with onFinish sync
   const batchMermaidHook = useObject({
@@ -59,31 +59,40 @@ export default function HomePage() {
         // SYNC POINT #3: Batch generation complete - create results
         const mermaidResults = result.object.results;
 
-        // Create a result for each planned chart
+        // Create a single result with all planned charts
+        const charts = [];
         for (let index = 0; index < currentPlannedCharts.length; index++) {
           const plan = currentPlannedCharts[index];
           const mermaidResult = mermaidResults.find(
             (r) => r && r.index === index
           );
 
-          if (
-            plan &&
-            plan.type &&
-            plan.description &&
-            mermaidResult &&
-            mermaidResult.chart
-          ) {
-            try {
-              await addResult(currentSessionId, prompt.trim(), {
-                chart: mermaidResult.chart.chart,
-                rationale: mermaidResult.chart.description || 'Generated chart',
-                source: ChartSource.GENERATION,
-                error: mermaidResult.error,
-                plan: plan as { type: typeof plan.type; description: string },
-              });
-            } catch (error) {
-              console.error('Failed to add result:', error);
+          if (plan && plan.type && plan.description) {
+            charts.push({
+              chart: mermaidResult?.chart?.chart || '',
+              rationale: mermaidResult?.chart?.description || 'Generated chart',
+              source: ChartSource.GENERATION,
+              error: mermaidResult?.error,
+              plan: plan as { type: typeof plan.type; description: string },
+            });
+          }
+        }
+
+        if (charts.length > 0) {
+          try {
+            // Add the first chart as the main result
+            const resultId = await addResult(
+              currentSessionId,
+              prompt.trim(),
+              charts[0]
+            );
+
+            // Add remaining charts to the same result
+            for (let i = 1; i < charts.length; i++) {
+              await addChartToResult(currentSessionId, resultId, charts[i]);
             }
+          } catch (error) {
+            console.error('Failed to add result:', error);
           }
         }
       }
@@ -178,6 +187,7 @@ export default function HomePage() {
         fixResult: undefined, // Will be managed by individual GeneratedChart components
         canFix: Boolean(mermaidResult?.error),
         fixError: undefined, // Will be managed by individual GeneratedChart components
+        chartIndex: index, // Add chart index for versioning
       };
     });
   }, [plannedCharts, mermaidResults, isBatchGenerating]);
