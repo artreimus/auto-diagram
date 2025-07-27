@@ -221,7 +221,11 @@ function SessionContent({
                             />
                             <div className='my-4 px-4'>
                               <div className='flex items-center gap-2 text-xs text-monochrome-silver'>
-                                <span>Type: {chart.plan.type}</span>
+                                <span>
+                                  Type:{' '}
+                                  {chart.plan.type.charAt(0).toUpperCase() +
+                                    chart.plan.type.slice(1)}
+                                </span>
                                 <span>•</span>
                                 <span>Version: {chart.currentVersion}</span>
                                 {chart.metadata.length > 1 && (
