@@ -6,7 +6,7 @@ import { ChartSource, ResultStatus } from '@/app/enum/session';
 export const chartSchema = z.object({
   version: z.number(), // 1 = original, 2+ = fixes
   chart: z.string(), // the mermaid code of the chart
-  ratio: z.string(), // the rationale of the LLM that generated the chart
+  rationale: z.string(), // the rationale of the LLM that generated the chart
   createdAt: z.string().datetime(), // ISO timestamp string
   source: z.nativeEnum(ChartSource), // How this version was created
   error: z.string().optional(), // Error that prompted this version (for fixes)
