@@ -138,7 +138,7 @@ function SessionContent({
               transition={{ duration: 0.4, delay: 0.2 }}
               className='text-sm text-monochrome-silver'
             >
-              Created on {session.createdAt.toLocaleDateString()} •{' '}
+              Created on {new Date(session.createdAt).toLocaleDateString()} •{' '}
               {session.results.length} result
               {session.results.length !== 1 ? 's' : ''}
             </motion.p>

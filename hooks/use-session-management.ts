@@ -97,13 +97,13 @@ export function useSessionManagement(): SessionHookReturn {
 
     try {
       const sessionId = nanoid();
-      const now = Date.now();
+      const now = new Date().toISOString();
 
       const newSession: Session = {
         id: sessionId,
         results: [],
-        createdAt: new Date(now),
-        updatedAt: new Date(now),
+        createdAt: now,
+        updatedAt: now,
       };
 
       // Validate before saving
@@ -140,12 +140,12 @@ export function useSessionManagement(): SessionHookReturn {
         const sessionIndex = findSessionIndexById(existingSessions, sessionId);
 
         const currentSession = existingSessions[sessionIndex];
-        const now = Date.now();
+        const now = new Date().toISOString();
 
         const updatedSession: Session = {
           ...currentSession,
           ...updates,
-          updatedAt: new Date(now),
+          updatedAt: now,
         };
 
         // Validate before saving
@@ -189,7 +189,7 @@ export function useSessionManagement(): SessionHookReturn {
         const session = findSessionById(existingSessions, sessionId);
 
         const resultId = nanoid();
-        const now = new Date();
+        const now = new Date().toISOString();
 
         const newChart: Chart = {
           chart: chartData.chart,
@@ -266,7 +266,7 @@ export function useSessionManagement(): SessionHookReturn {
           error: chartData.error,
           plan: chartData.plan,
           version: newVersionNumber,
-          createdAt: new Date(),
+          createdAt: new Date().toISOString(),
         };
 
         // Update result with new version
@@ -275,7 +275,7 @@ export function useSessionManagement(): SessionHookReturn {
           charts: [...result.charts, newVersion],
           currentVersion: newVersionNumber,
           status: chartData.error ? ResultStatus.ERROR : ResultStatus.COMPLETED,
-          updatedAt: new Date(),
+          updatedAt: new Date().toISOString(),
         };
 
         // Update session
@@ -347,7 +347,7 @@ export function useSessionManagement(): SessionHookReturn {
 
       // Sort by updatedAt (most recent first)
       validatedSessions.sort(
-        (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()
+        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
       );
       return validatedSessions;
     } catch {
