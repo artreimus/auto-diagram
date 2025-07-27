@@ -54,7 +54,7 @@ export function HistorySidebar({
   const router = useRouter();
 
   const sortedSessions = [...sessions].sort(
-    (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
   );
 
   const onSessionSelect = (session: Session) => {
@@ -147,7 +147,9 @@ export function HistorySidebar({
                             <span className='text-xs text-monochrome-silver font-light flex items-center space-x-1'>
                               <Calendar className='w-3 h-3' />
                               <span>
-                                {formatDate(session.updatedAt.getTime())}
+                                {formatDate(
+                                  new Date(session.updatedAt).getTime()
+                                )}
                               </span>
                             </span>
                             <span className='text-xs text-monochrome-ash bg-monochrome-graphite/30 px-2 py-0.5 rounded-full'>
