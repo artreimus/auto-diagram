@@ -57,7 +57,7 @@ interface SessionHookReturn {
     prompt: string,
     chartData: {
       chart: string;
-      ratio: string;
+      rationale: string;
       source: ChartSource;
       error?: string;
       plan: Chart['plan'];
@@ -68,7 +68,7 @@ interface SessionHookReturn {
     chartId: string,
     chartData: {
       chart: string;
-      ratio: string;
+      rationale: string;
       source: ChartSource;
       error?: string;
       plan: Chart['plan'];
@@ -173,7 +173,7 @@ export function useSessionManagement(): SessionHookReturn {
       prompt: string,
       chartData: {
         chart: string;
-        ratio: string;
+        rationale: string;
         source: ChartSource;
         error?: string;
         plan: Chart['plan'];
@@ -192,7 +192,7 @@ export function useSessionManagement(): SessionHookReturn {
 
         const newChart: Chart = {
           chart: chartData.chart,
-          ratio: chartData.ratio,
+          rationale: chartData.rationale,
           source: chartData.source,
           error: chartData.error,
           plan: chartData.plan,
@@ -212,7 +212,7 @@ export function useSessionManagement(): SessionHookReturn {
 
         // Update session with new result
         const updatedResults = [...session.results, newResult];
-        
+
         await syncSession(sessionId, {
           results: updatedResults,
         });
@@ -237,7 +237,7 @@ export function useSessionManagement(): SessionHookReturn {
       chartId: string,
       chartData: {
         chart: string;
-        ratio: string;
+        rationale: string;
         source: ChartSource;
         error?: string;
         plan: Chart['plan'];
@@ -261,7 +261,7 @@ export function useSessionManagement(): SessionHookReturn {
 
         const newVersion: Chart = {
           chart: chartData.chart,
-          ratio: chartData.ratio,
+          rationale: chartData.rationale,
           source: chartData.source,
           error: chartData.error,
           plan: chartData.plan,
@@ -347,7 +347,8 @@ export function useSessionManagement(): SessionHookReturn {
 
       // Sort by updatedAt (most recent first)
       validatedSessions.sort(
-        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
       );
       return validatedSessions;
     } catch {

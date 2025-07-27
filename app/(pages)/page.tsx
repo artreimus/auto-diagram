@@ -51,7 +51,11 @@ export default function HomePage() {
     onFinish: async (result) => {
       const currentSessionId = sessionIdRef.current;
       const currentPlannedCharts = plannedChartsRef.current;
-      if (currentSessionId && result.object && Array.isArray(currentPlannedCharts)) {
+      if (
+        currentSessionId &&
+        result.object &&
+        Array.isArray(currentPlannedCharts)
+      ) {
         // SYNC POINT #3: Batch generation complete - create results
         const mermaidResults = result.object.results;
 
@@ -72,7 +76,7 @@ export default function HomePage() {
             try {
               await addResult(currentSessionId, prompt.trim(), {
                 chart: mermaidResult.chart.chart,
-                ratio: mermaidResult.chart.description || 'Generated chart',
+                rationale: mermaidResult.chart.description || 'Generated chart',
                 source: ChartSource.GENERATION,
                 error: mermaidResult.error,
                 plan: plan as { type: typeof plan.type; description: string },
