@@ -135,12 +135,21 @@ export function HistorySidebar({
                         isActive={selectedSessionId === session.id}
                         onClick={() => onSessionSelect(session)}
                         className='w-full justify-start text-left p-3 h-auto'
-                        tooltip={`Session ${session.id.slice(0, 8)}`}
+                        tooltip={
+                          session.results.length > 0
+                            ? session.results[0].prompt
+                            : `Session ${session.id.slice(0, 8)}`
+                        }
                       >
                         <div className='flex-1 min-w-0'>
                           <div className='flex items-start justify-between mb-1'>
                             <p className='text-sm font-medium text-monochrome-pure-white truncate'>
-                              Session {session.id.slice(0, 8)}
+                              {session.results.length > 0
+                                ? session.results[0].prompt.length > 30
+                                  ? session.results[0].prompt.substring(0, 30) +
+                                    '...'
+                                  : session.results[0].prompt
+                                : `Session ${session.id.slice(0, 8)}`}
                             </p>
                           </div>
                           <div className='flex items-center justify-between'>
@@ -154,13 +163,13 @@ export function HistorySidebar({
                             </span>
                             <span className='text-xs text-monochrome-ash bg-monochrome-graphite/30 px-2 py-0.5 rounded-full'>
                               {(() => {
-                                // Count results that have charts (completed results)
-                                const completedResults = session.results.filter(
-                                  (result) =>
-                                    result.charts && result.charts.length > 0
-                                ).length;
+                                // Count total charts across all results
+                                const totalCharts = session.results.reduce(
+                                  (sum, result) => sum + result.charts.length,
+                                  0
+                                );
 
-                                return `${completedResults} result${completedResults !== 1 ? 's' : ''}`;
+                                return `${totalCharts} chart${totalCharts !== 1 ? 's' : ''}`;
                               })()}
                             </span>
                           </div>

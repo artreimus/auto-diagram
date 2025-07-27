@@ -63,15 +63,26 @@ interface SessionHookReturn {
       plan: Chart['plan'];
     }
   ) => Promise<string>;
-  addChartVersion: (
+  addChartToResult: (
     sessionId: string,
-    chartId: string,
+    resultId: string,
     chartData: {
       chart: string;
       rationale: string;
       source: ChartSource;
       error?: string;
       plan: Chart['plan'];
+    }
+  ) => Promise<void>;
+  addChartVersion: (
+    sessionId: string,
+    resultId: string,
+    chartIndex: number,
+    chartData: {
+      chart: string;
+      rationale: string;
+      source: ChartSource;
+      error?: string;
     }
   ) => Promise<void>;
 
@@ -191,21 +202,27 @@ export function useSessionManagement(): SessionHookReturn {
         const now = new Date().toISOString();
 
         const newChart: Chart = {
-          chart: chartData.chart,
-          rationale: chartData.rationale,
-          source: chartData.source,
-          error: chartData.error,
+          metadata: [
+            {
+              version: 1,
+              chart: chartData.chart,
+              rationale: chartData.rationale,
+              createdAt: now,
+              source: chartData.source,
+              error: chartData.error,
+              status: chartData.error
+                ? ResultStatus.ERROR
+                : ResultStatus.COMPLETED,
+            },
+          ],
+          currentVersion: 1,
           plan: chartData.plan,
-          version: 1,
-          createdAt: now,
         };
 
         const newResult: Result = {
           id: resultId,
           prompt,
           charts: [newChart],
-          currentVersion: 1,
-          status: chartData.error ? ResultStatus.ERROR : ResultStatus.COMPLETED,
           createdAt: now,
           updatedAt: now,
         };
@@ -230,17 +247,90 @@ export function useSessionManagement(): SessionHookReturn {
     [syncSession]
   );
 
-  // Add new chart version (for fixes)
-  const addChartVersion = useCallback(
+  // Add chart to existing result
+  const addChartToResult = useCallback(
     async (
       sessionId: string,
-      chartId: string,
+      resultId: string,
       chartData: {
         chart: string;
         rationale: string;
         source: ChartSource;
         error?: string;
         plan: Chart['plan'];
+      }
+    ): Promise<void> => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        // Get all sessions from consolidated storage
+        const existingSessions = getSessionsFromStorage();
+        const session = findSessionById(existingSessions, sessionId);
+
+        const resultIndex = session.results.findIndex(
+          (result) => result.id === resultId
+        );
+        if (resultIndex === -1) throw new Error('Result not found');
+
+        const result = session.results[resultIndex];
+        const now = new Date().toISOString();
+
+        const newChart: Chart = {
+          metadata: [
+            {
+              version: 1,
+              chart: chartData.chart,
+              rationale: chartData.rationale,
+              createdAt: now,
+              source: chartData.source,
+              error: chartData.error,
+              status: chartData.error
+                ? ResultStatus.ERROR
+                : ResultStatus.COMPLETED,
+            },
+          ],
+          currentVersion: 1,
+          plan: chartData.plan,
+        };
+
+        // Update result with new chart
+        const updatedResult: Result = {
+          ...result,
+          charts: [...result.charts, newChart],
+          updatedAt: now,
+        };
+
+        // Update session
+        const updatedResults = [...session.results];
+        updatedResults[resultIndex] = updatedResult;
+
+        await syncSession(sessionId, {
+          results: updatedResults,
+        });
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to add chart to result';
+        setError(errorMessage);
+        throw new Error(errorMessage);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [syncSession]
+  );
+
+  // Add new chart version (for fixes)
+  const addChartVersion = useCallback(
+    async (
+      sessionId: string,
+      resultId: string,
+      chartIndex: number,
+      chartData: {
+        chart: string;
+        rationale: string;
+        source: ChartSource;
+        error?: string;
       }
     ): Promise<void> => {
       setIsLoading(true);
@@ -251,31 +341,44 @@ export function useSessionManagement(): SessionHookReturn {
         const session = findSessionById(existingSessions, sessionId);
 
         const resultIndex = session.results.findIndex(
-          (result) => result.id === chartId
+          (result) => result.id === resultId
         );
         if (resultIndex === -1) throw new Error('Result not found');
 
         const result = session.results[resultIndex];
-        const newVersionNumber =
-          Math.max(...result.charts.map((v) => v.version)) + 1;
+        if (chartIndex >= result.charts.length)
+          throw new Error('Chart not found');
 
-        const newVersion: Chart = {
+        const chart = result.charts[chartIndex];
+        const newVersionNumber =
+          Math.max(...chart.metadata.map((m) => m.version)) + 1;
+        const now = new Date().toISOString();
+
+        const newMetadata = {
+          version: newVersionNumber,
           chart: chartData.chart,
           rationale: chartData.rationale,
+          createdAt: now,
           source: chartData.source,
           error: chartData.error,
-          plan: chartData.plan,
-          version: newVersionNumber,
-          createdAt: new Date().toISOString(),
+          status: chartData.error ? ResultStatus.ERROR : ResultStatus.COMPLETED,
         };
 
-        // Update result with new version
+        // Update chart with new version
+        const updatedChart: Chart = {
+          ...chart,
+          metadata: [...chart.metadata, newMetadata],
+          currentVersion: newVersionNumber,
+        };
+
+        // Update result
+        const updatedCharts = [...result.charts];
+        updatedCharts[chartIndex] = updatedChart;
+
         const updatedResult: Result = {
           ...result,
-          charts: [...result.charts, newVersion],
-          currentVersion: newVersionNumber,
-          status: chartData.error ? ResultStatus.ERROR : ResultStatus.COMPLETED,
-          updatedAt: new Date().toISOString(),
+          charts: updatedCharts,
+          updatedAt: now,
         };
 
         // Update session
@@ -363,6 +466,7 @@ export function useSessionManagement(): SessionHookReturn {
     createSession,
     syncSession,
     addResult,
+    addChartToResult,
     addChartVersion,
     loadSession,
     getAllSessions,
