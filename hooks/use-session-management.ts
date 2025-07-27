@@ -138,7 +138,6 @@ export function useSessionManagement(): SessionHookReturn {
         // Get all sessions from consolidated storage
         const existingSessions = getSessionsFromStorage();
         const sessionIndex = findSessionIndexById(existingSessions, sessionId);
-
         const currentSession = existingSessions[sessionIndex];
         const now = new Date().toISOString();
 
@@ -213,6 +212,7 @@ export function useSessionManagement(): SessionHookReturn {
 
         // Update session with new result
         const updatedResults = [...session.results, newResult];
+        
         await syncSession(sessionId, {
           results: updatedResults,
         });

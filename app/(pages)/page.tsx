@@ -28,8 +28,9 @@ export default function HomePage() {
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
 
-  // Use ref to store current sessionId for onFinish callbacks
+  // Use refs to store current sessionId and plannedCharts for onFinish callbacks
   const sessionIdRef = useRef<string | null>(null);
+  const plannedChartsRef = useRef<ChartPlan[] | null>(null);
 
   // Session management with event-driven sync
   const { createSession, addResult } = useSessionManagement();
@@ -49,13 +50,14 @@ export default function HomePage() {
     }),
     onFinish: async (result) => {
       const currentSessionId = sessionIdRef.current;
-      if (currentSessionId && result.object && Array.isArray(plannedCharts)) {
+      const currentPlannedCharts = plannedChartsRef.current;
+      if (currentSessionId && result.object && Array.isArray(currentPlannedCharts)) {
         // SYNC POINT #3: Batch generation complete - create results
         const mermaidResults = result.object.results;
 
         // Create a result for each planned chart
-        for (let index = 0; index < plannedCharts.length; index++) {
-          const plan = plannedCharts[index];
+        for (let index = 0; index < currentPlannedCharts.length; index++) {
+          const plan = currentPlannedCharts[index];
           const mermaidResult = mermaidResults.find(
             (r) => r && r.index === index
           );
@@ -89,25 +91,17 @@ export default function HomePage() {
     api: '/api/planner',
     schema: plannerSchema,
     onFinish: (result) => {
-      console.log('planning complete');
       const currentSessionId = sessionIdRef.current;
-      console.log('currentSessionId from ref', currentSessionId);
-      console.log('result', result);
-      console.log('result.object', result.object);
-      console.log('array check', Array.isArray(result.object));
-
-      console.log(
-        'currentSessionId && result.object && Array.isArray(result.object)',
-        currentSessionId && result.object && Array.isArray(result.object)
-      );
 
       if (currentSessionId && result.object && Array.isArray(result.object)) {
         // SYNC POINT #2: Planning complete - event-driven
         // Note: For now, we'll skip syncing planning data since the schema doesn't support it yet
         // syncSession(currentSessionId, {});
 
+        // Store planned charts in ref for batch onFinish callback
+        plannedChartsRef.current = result.object;
+
         // Pattern 2 Implementation: Trigger batch mermaid generation immediately
-        console.log('generating charts');
         if (result.object.length > 0) {
           batchMermaidHook.submit({
             charts: result.object.map((plan: ChartPlan) => ({
@@ -119,7 +113,6 @@ export default function HomePage() {
           });
         }
       }
-      console.log('planning exit');
     },
   });
 
