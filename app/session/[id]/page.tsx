@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import ReactMarkdown from 'react-markdown';
-import { HistorySession } from '@/app/lib/history';
+import { Session } from '@/lib/session-schema';
 import MermaidDiagram from '@/app/components/MermaidDiagram';
 
 const MinimalLoadingSpinner = () => (
@@ -31,27 +30,46 @@ const MinimalLoadingSpinner = () => (
   </div>
 );
 
-export default async function SessionPage({
-  params,
-}: {
+interface SessionPageProps {
   params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-
-  return <SessionContent sessionId={id} />;
 }
 
-function SessionContent({ sessionId }: { sessionId: string }) {
-  const [session, setSession] = useState<HistorySession | null>(null);
+export default function SessionPage({ params }: SessionPageProps) {
+  return <SessionContent paramsPromise={params} />;
+}
+
+function SessionContent({
+  paramsPromise,
+}: {
+  paramsPromise: Promise<{ id: string }>;
+}) {
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionId, setSessionId] = useState<string | null>(null);
 
   useEffect(() => {
+    const resolveParams = async () => {
+      try {
+        const { id } = await paramsPromise;
+        setSessionId(id);
+      } catch (error) {
+        console.error('Failed to resolve params:', error);
+        setLoading(false);
+      }
+    };
+
+    resolveParams();
+  }, [paramsPromise]);
+
+  useEffect(() => {
+    if (!sessionId) return;
+
     const loadSession = () => {
       try {
-        const saved = localStorage.getItem('chart-history');
+        const saved = localStorage.getItem('sessions');
         if (saved) {
-          const history: HistorySession[] = JSON.parse(saved);
-          const foundSession = history.find((s) => s.id === sessionId);
+          const sessions: Session[] = JSON.parse(saved);
+          const foundSession = sessions.find((s) => s.id === sessionId);
           setSession(foundSession || null);
         }
       } catch (error) {
@@ -112,7 +130,7 @@ function SessionContent({ sessionId }: { sessionId: string }) {
               transition={{ duration: 0.4, delay: 0.1 }}
               className='text-2xl font-light tracking-tight text-monochrome-pure-white mb-2'
             >
-              {session.prompt}
+              Session {session.id.slice(0, 8)}
             </motion.h1>
             <motion.p
               initial={{ opacity: 0 }}
@@ -120,17 +138,17 @@ function SessionContent({ sessionId }: { sessionId: string }) {
               transition={{ duration: 0.4, delay: 0.2 }}
               className='text-sm text-monochrome-silver'
             >
-              Created on {new Date(session.createdAt).toLocaleDateString()} •{' '}
-              {session.charts.length} chart
-              {session.charts.length !== 1 ? 's' : ''}
+              Created on {session.createdAt.toLocaleDateString()} •{' '}
+              {session.results.length} result
+              {session.results.length !== 1 ? 's' : ''}
             </motion.p>
           </div>
 
-          {/* Charts display */}
+          {/* Results display */}
           <div className='grid gap-12'>
-            {session.charts.map((chart, index) => (
+            {session.results.map((result, index) => (
               <motion.div
-                key={index}
+                key={result.id}
                 initial={{ opacity: 0, y: 32 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{
@@ -140,92 +158,35 @@ function SessionContent({ sessionId }: { sessionId: string }) {
                 }}
                 className='border border-monochrome-pewter/20 bg-monochrome-charcoal/10 rounded-3xl p-8 backdrop-blur-sm shadow-soft'
               >
-                {chart.mermaid && (
+                {result.charts.length > 0 && (
                   <>
                     <div className='mb-8'>
                       <h3 className='text-xl font-light tracking-tight text-monochrome-pure-white capitalize mb-3'>
-                        {chart.plan.type} Visualization
+                        Chart Result
                       </h3>
                       <div className='text-monochrome-silver font-light leading-loose text-sm tracking-wide prose prose-sm prose-invert max-w-none'>
-                        <ReactMarkdown
-                          components={{
-                            p: ({ children }) => (
-                              <p className='mb-3 last:mb-0 leading-loose'>
-                                {children}
-                              </p>
-                            ),
-                            strong: ({ children }) => (
-                              <strong className='font-medium text-monochrome-cloud'>
-                                {children}
-                              </strong>
-                            ),
-                            em: ({ children }) => (
-                              <em className='italic text-monochrome-pearl'>
-                                {children}
-                              </em>
-                            ),
-                            code: ({ children }) => (
-                              <code className='bg-monochrome-graphite/50 px-1.5 py-0.5 rounded text-monochrome-pearl font-mono text-xs'>
-                                {children}
-                              </code>
-                            ),
-                            ul: ({ children }) => (
-                              <ul className='list-disc list-inside space-y-1.5 mb-3'>
-                                {children}
-                              </ul>
-                            ),
-                            ol: ({ children }) => (
-                              <ol className='list-decimal list-inside space-y-1.5 mb-3'>
-                                {children}
-                              </ol>
-                            ),
-                            li: ({ children }) => (
-                              <li className='text-sm leading-loose'>
-                                {children}
-                              </li>
-                            ),
-                            h1: ({ children }) => (
-                              <h1 className='text-lg font-medium text-monochrome-pure-white mb-3 mt-4 first:mt-0'>
-                                {children}
-                              </h1>
-                            ),
-                            h2: ({ children }) => (
-                              <h2 className='text-base font-medium text-monochrome-pure-white mb-2 mt-3 first:mt-0'>
-                                {children}
-                              </h2>
-                            ),
-                            h3: ({ children }) => (
-                              <h3 className='text-sm font-medium text-monochrome-cloud mb-2 mt-3 first:mt-0'>
-                                {children}
-                              </h3>
-                            ),
-                            blockquote: ({ children }) => (
-                              <blockquote className='border-l-2 border-monochrome-pewter/30 pl-4 italic text-monochrome-silver/90 mb-3'>
-                                {children}
-                              </blockquote>
-                            ),
-                          }}
-                        >
-                          {chart.plan.description}
-                        </ReactMarkdown>
+                        <p className='mb-3 last:mb-0 leading-loose'>
+                          {result.prompt}
+                        </p>
                       </div>
 
                       {/* Generation history info */}
-                      {chart.fixAttempts && chart.fixAttempts.length > 0 && (
+                      {result.charts.length > 1 && (
                         <div className='mt-4 p-3 bg-monochrome-graphite/30 rounded-xl border border-monochrome-pewter/20'>
                           <p className='text-xs text-monochrome-ash mb-2'>
-                            Generation History: {chart.fixAttempts.length + 1}{' '}
-                            attempt{chart.fixAttempts.length !== 0 ? 's' : ''}
+                            Generation History: {result.charts.length} version
+                            {result.charts.length !== 1 ? 's' : ''}
                           </p>
-                          {chart.fixAttempts.map((attempt, attemptIndex) => (
+                          {result.charts.map((chartVersion, chartIndex) => (
                             <div
-                              key={attemptIndex}
+                              key={chartIndex}
                               className='text-xs text-monochrome-silver/70 mb-1'
                             >
-                              Attempt {attemptIndex + 1}: {attempt.error}
-                              {attempt.explanation && (
+                              Version {chartVersion.version}:{' '}
+                              {chartVersion.source}
+                              {chartVersion.error && (
                                 <span className='ml-2 text-monochrome-ash'>
-                                  • {attempt.explanation}
+                                  • {chartVersion.error}
                                 </span>
                               )}
                             </div>
@@ -239,12 +200,15 @@ function SessionContent({ sessionId }: { sessionId: string }) {
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ duration: 0.6, ease: 'easeOut' }}
                     >
-                      <MermaidDiagram
-                        key={index}
-                        id={`session-${session.id}-${index}`}
-                        chart={chart.mermaid.chart}
-                        onRenderError={() => {}}
-                      />
+                      {/* Show the current version */}
+                      {result.charts[result.currentVersion - 1] && (
+                        <MermaidDiagram
+                          key={`${result.id}-${result.currentVersion}`}
+                          id={`session-${session.id}-${result.id}`}
+                          chart={result.charts[result.currentVersion - 1].chart}
+                          onRenderError={() => {}}
+                        />
+                      )}
                     </motion.div>
                   </>
                 )}

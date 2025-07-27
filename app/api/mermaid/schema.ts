@@ -1,8 +1,9 @@
+import { ChartType } from '@/app/enum/chart-types';
+import { MessageRole } from '@/app/enum/session';
 import { z } from 'zod';
-import { supportedChartTypes } from '@/lib/chart-types';
 
 export const mermaidSchema = z.object({
-  type: z.enum(supportedChartTypes),
+  type: z.nativeEnum(ChartType),
   description: z
     .string()
     .describe('An explanation of the generated Mermaid chart.'),
@@ -19,11 +20,11 @@ export type MermaidChart = z.infer<typeof mermaidSchema>;
 export const mermaidRequestSchema = z.object({
   messages: z.array(
     z.object({
-      role: z.enum(['user', 'assistant']),
+      role: z.nativeEnum(MessageRole),
       content: z.string(),
     })
   ),
-  chartType: z.enum(supportedChartTypes),
+  chartType: z.nativeEnum(ChartType),
   originalUserMessage: z
     .string()
     .describe('The original user query that started this session'),
@@ -38,7 +39,7 @@ export type MermaidRequest = z.infer<typeof mermaidRequestSchema>;
 export const batchMermaidRequestSchema = z.object({
   charts: z.array(
     z.object({
-      chartType: z.enum(supportedChartTypes),
+      chartType: z.nativeEnum(ChartType),
       description: z
         .string()
         .describe('The description of what the chart should show'),
@@ -72,7 +73,7 @@ export type BatchMermaidResponse = z.infer<typeof batchMermaidResponseSchema>;
 export const mermaidFixRequestSchema = z.object({
   chart: z.string().describe('The broken Mermaid chart code'),
   error: z.string().describe('The error message from rendering'),
-  chartType: z.enum(supportedChartTypes),
+  chartType: z.nativeEnum(ChartType),
   description: z
     .string()
     .optional()

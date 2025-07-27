@@ -21,8 +21,7 @@ import {
 } from '../components/AnimatedWrappers';
 import { useSessionManagement } from '@/hooks/use-session-management';
 import { chartRevealAnimation } from '@/app/lib/animations';
-
-type ChartStatus = 'pending' | 'generating' | 'fixing' | 'completed' | 'error';
+import { ChartSource, ResultStatus } from '../enum/session';
 
 export default function HomePage() {
   const [prompt, setPrompt] = useState('');
@@ -33,7 +32,7 @@ export default function HomePage() {
   const sessionIdRef = useRef<string | null>(null);
 
   // Session management with event-driven sync
-  const { createSession, syncSession } = useSessionManagement();
+  const { createSession, addResult } = useSessionManagement();
 
   // Pattern 2: Single batch mermaid generation hook with onFinish sync
   const batchMermaidHook = useObject({
@@ -48,29 +47,39 @@ export default function HomePage() {
         })
       ),
     }),
-    onFinish: (result) => {
+    onFinish: async (result) => {
       const currentSessionId = sessionIdRef.current;
       if (currentSessionId && result.object && Array.isArray(plannedCharts)) {
-        // SYNC POINT #3: Batch generation complete - event-driven
+        // SYNC POINT #3: Batch generation complete - create results
         const mermaidResults = result.object.results;
-        const chartResults = plannedCharts.map((plan, index) => {
-          const mermaidResult = mermaidResults.find((r) => r.index === index);
-          return {
-            plan,
-            mermaidResult: mermaidResult?.chart,
-            fixResult: undefined,
-            finalChart: mermaidResult?.chart?.chart,
-            error: mermaidResult?.error,
-            status: mermaidResult?.success ? 'completed' : 'error',
-          };
-        });
 
-        syncSession(currentSessionId, {
-          status: 'charts_completed',
-          batchMermaidResults: mermaidResults,
-          chartResults,
-          updatedAt: Date.now(),
-        });
+        // Create a result for each planned chart
+        for (let index = 0; index < plannedCharts.length; index++) {
+          const plan = plannedCharts[index];
+          const mermaidResult = mermaidResults.find(
+            (r) => r && r.index === index
+          );
+
+          if (
+            plan &&
+            plan.type &&
+            plan.description &&
+            mermaidResult &&
+            mermaidResult.chart
+          ) {
+            try {
+              await addResult(currentSessionId, prompt.trim(), {
+                chart: mermaidResult.chart.chart,
+                ratio: mermaidResult.chart.description || 'Generated chart',
+                source: ChartSource.GENERATION,
+                error: mermaidResult.error,
+                plan: plan as { type: typeof plan.type; description: string },
+              });
+            } catch (error) {
+              console.error('Failed to add result:', error);
+            }
+          }
+        }
       }
     },
   });
@@ -94,11 +103,8 @@ export default function HomePage() {
 
       if (currentSessionId && result.object && Array.isArray(result.object)) {
         // SYNC POINT #2: Planning complete - event-driven
-        syncSession(currentSessionId, {
-          status: 'charts_generating',
-          plannedCharts: result.object,
-          updatedAt: Date.now(),
-        });
+        // Note: For now, we'll skip syncing planning data since the schema doesn't support it yet
+        // syncSession(currentSessionId, {});
 
         // Pattern 2 Implementation: Trigger batch mermaid generation immediately
         console.log('generating charts');
@@ -128,14 +134,14 @@ export default function HomePage() {
   const getChartStatus = (
     mermaidResult: unknown,
     isBatchGenerating: boolean
-  ): ChartStatus => {
+  ): ResultStatus => {
     const result = mermaidResult as
       | { chart?: { chart?: string }; error?: string }
       | undefined;
-    if (isBatchGenerating && !result) return 'generating';
-    if (result?.chart?.chart) return 'completed';
-    if (result?.error) return 'error';
-    return 'pending';
+    if (isBatchGenerating && !result) return ResultStatus.GENERATING;
+    if (result?.chart?.chart) return ResultStatus.COMPLETED;
+    if (result?.error) return ResultStatus.ERROR;
+    return ResultStatus.PENDING;
   };
 
   // Handle fix completion from individual chart components
@@ -143,12 +149,10 @@ export default function HomePage() {
     const currentSessionId = sessionIdRef.current;
     if (currentSessionId) {
       // SYNC POINT #4: Individual fix complete - event-driven per chart
-      syncSession(currentSessionId, {
-        status: 'manual_fix_completed',
-        updatedAt: Date.now(),
-      });
+      // Note: For now, we'll skip syncing fix completion since the schema doesn't support it yet
+      // syncSession(currentSessionId, {});
     }
-  }, [syncSession]);
+  }, []);
 
   // Chart status computation with simplified logic
   const chartStatuses = useMemo(() => {
@@ -191,15 +195,8 @@ export default function HomePage() {
       if (prompt.trim() && !isProcessing) {
         setHasSubmitted(true);
 
-        // Create session immediately with initial data
-        const newSessionId = await createSession({
-          prompt: prompt.trim(),
-          status: 'planning',
-          timestamp: Date.now(),
-          plannedCharts: null,
-          batchMermaidResults: null,
-          chartResults: [],
-        });
+        // Create session immediately
+        const newSessionId = await createSession();
 
         setSessionId(newSessionId);
         sessionIdRef.current = newSessionId; // Update ref
@@ -260,7 +257,6 @@ export default function HomePage() {
             value={prompt}
             onChange={setPrompt}
             onSubmit={handleFormSubmit}
-            onKeyDown={() => {}} // Simple no-op handler
             isProcessing={isProcessing}
             autoFocus
           />

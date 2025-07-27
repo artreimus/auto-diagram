@@ -6,12 +6,13 @@ import ReactMarkdown from 'react-markdown';
 import MermaidDiagram from './MermaidDiagram';
 import { ChartPlan } from '@/app/api/planner/schema';
 import { mermaidSchema } from '@/app/api/mermaid/schema';
+import { ResultStatus } from '../enum/session';
 
 // Enhanced props with AI SDK pattern context
 interface GeneratedChartProps {
   chartStatus: {
     plan: ChartPlan;
-    status: 'pending' | 'generating' | 'fixing' | 'completed' | 'error';
+    status: ResultStatus;
     chart?: string;
     isGenerating: boolean;
     isFixing: boolean;

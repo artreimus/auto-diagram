@@ -1,6 +1,6 @@
+import { ChartType } from '@/app/enum/chart-types';
 import { promises as fs } from 'fs';
 import { join } from 'path';
-import { supportedChartTypes } from './chart-types';
 
 /**
  * Template variables that can be replaced in prompts
@@ -155,7 +155,7 @@ export async function createPlannerPrompt(): Promise<string> {
   const template = await loadPromptTemplate('planner');
 
   return renderTemplate(template, {
-    supportedChartTypes: supportedChartTypes,
+    supportedChartTypes: Object.values(ChartType),
   });
 }
 

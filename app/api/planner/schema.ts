@@ -1,8 +1,8 @@
 import { z } from 'zod';
-import { supportedChartTypes } from '@/lib/chart-types';
+import { ChartType } from '@/app/enum/chart-types';
 
 export const chartPlanSchema = z.object({
-  type: z.enum(supportedChartTypes).describe('The type of chart to generate.'),
+  type: z.nativeEnum(ChartType).describe('The type of chart to generate.'),
   description: z
     .string()
     .describe(

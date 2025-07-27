@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { MinimalLoadingSpinner } from './MinimalLoadingSpinner';
+import { ResultStatus } from '../enum/session';
 
 interface ProcessingStateProps {
   isPlanning: boolean;
@@ -16,7 +17,7 @@ export const ProcessingState = ({ isPlanning }: ProcessingStateProps) => (
     <div className='flex items-center space-x-4'>
       <MinimalLoadingSpinner />
       <span className='text-monochrome-silver font-light tracking-wide'>
-        {isPlanning ? 'Planning' : 'Generating'}
+        {isPlanning ? ResultStatus.PLANNING : ResultStatus.GENERATING}
       </span>
     </div>
   </motion.div>
