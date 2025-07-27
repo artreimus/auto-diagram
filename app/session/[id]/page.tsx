@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
 import { Session } from '@/lib/session-schema';
 import MermaidDiagram from '@/app/components/MermaidDiagram';
 
@@ -165,9 +166,61 @@ function SessionContent({
                         Chart Result
                       </h3>
                       <div className='text-monochrome-silver font-light leading-loose text-sm tracking-wide prose prose-sm prose-invert max-w-none'>
-                        <p className='mb-3 last:mb-0 leading-loose'>
-                          {result.prompt}
-                        </p>
+                        <ReactMarkdown
+                          components={{
+                            p: ({ children }) => (
+                              <p className='mb-3 last:mb-0 leading-loose'>{children}</p>
+                            ),
+                            strong: ({ children }) => (
+                              <strong className='font-medium text-monochrome-cloud'>
+                                {children}
+                              </strong>
+                            ),
+                            em: ({ children }) => (
+                              <em className='italic text-monochrome-pearl'>{children}</em>
+                            ),
+                            code: ({ children }) => (
+                              <code className='bg-monochrome-graphite/50 px-1.5 py-0.5 rounded text-monochrome-pearl font-mono text-xs'>
+                                {children}
+                              </code>
+                            ),
+                            ul: ({ children }) => (
+                              <ul className='list-disc list-inside space-y-1.5 mb-3'>
+                                {children}
+                              </ul>
+                            ),
+                            ol: ({ children }) => (
+                              <ol className='list-decimal list-inside space-y-1.5 mb-3'>
+                                {children}
+                              </ol>
+                            ),
+                            li: ({ children }) => (
+                              <li className='text-sm leading-loose'>{children}</li>
+                            ),
+                            h1: ({ children }) => (
+                              <h1 className='text-lg font-medium text-monochrome-pure-white mb-3 mt-4 first:mt-0'>
+                                {children}
+                              </h1>
+                            ),
+                            h2: ({ children }) => (
+                              <h2 className='text-base font-medium text-monochrome-pure-white mb-2 mt-3 first:mt-0'>
+                                {children}
+                              </h2>
+                            ),
+                            h3: ({ children }) => (
+                              <h3 className='text-sm font-medium text-monochrome-cloud mb-2 mt-3 first:mt-0'>
+                                {children}
+                              </h3>
+                            ),
+                            blockquote: ({ children }) => (
+                              <blockquote className='border-l-2 border-monochrome-pewter/30 pl-4 italic text-monochrome-silver/90 mb-3'>
+                                {children}
+                              </blockquote>
+                            ),
+                          }}
+                        >
+                          {result.charts[result.currentVersion - 1]?.plan?.description || result.prompt}
+                        </ReactMarkdown>
                       </div>
 
                       {/* Generation history info */}
