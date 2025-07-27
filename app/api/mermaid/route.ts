@@ -1,5 +1,5 @@
 import { streamObject } from 'ai';
-import { supportedChartTypes } from '@/lib/chart-types';
+import { ChartType } from '@/app/enum/chart-types';
 import { mermaidSchema, mermaidRequestSchema } from './schema';
 import { createAIModel } from '@/lib/ai-provider';
 import { env } from '@/env.mjs';
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   const { messages, chartType, originalUserMessage, planDescription } =
     validation.data;
 
-  if (!supportedChartTypes.includes(chartType)) {
+  if (!Object.values(ChartType).includes(chartType as ChartType)) {
     return new Response(`Unsupported chart type: ${chartType}`, {
       status: 400,
     });

@@ -3,6 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Clock, FileText, Calendar } from 'lucide-react';
+import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns';
 import {
   Sidebar,
   SidebarContent,
@@ -14,50 +15,55 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { HistorySession } from '@/app/lib/history';
+import { Session } from '@/lib/session-schema';
 import { AutoDiagramLogo } from './AutoDiagramLogo';
+import { useRouter } from 'next/navigation';
 
 interface HistorySidebarProps {
-  sessions: HistorySession[];
+  sessions: Session[];
   selectedSessionId: string | null;
-  onSessionSelect: (session: HistorySession) => void;
-  onNewSession: () => void;
 }
 
-const formatDate = (dateString: string) => {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffInMinutes = Math.floor(
-    (now.getTime() - date.getTime()) / (1000 * 60)
-  );
+const formatDate = (timestamp: number) => {
+  const date = new Date(timestamp);
 
-  if (diffInMinutes < 1) return 'Just now';
-  if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+  if (isToday(date)) {
+    return formatDistanceToNow(date, { addSuffix: true });
+  }
 
-  const diffInHours = Math.floor(diffInMinutes / 60);
-  if (diffInHours < 24) return `${diffInHours}h ago`;
+  if (isYesterday(date)) {
+    return 'Yesterday';
+  }
 
-  const diffInDays = Math.floor(diffInHours / 24);
-  if (diffInDays < 7) return `${diffInDays}d ago`;
+  // For dates within the last week, show relative time
+  const weekAgo = new Date();
+  weekAgo.setDate(weekAgo.getDate() - 7);
 
-  return date.toLocaleDateString();
-};
+  if (date > weekAgo) {
+    return formatDistanceToNow(date, { addSuffix: true });
+  }
 
-const truncatePrompt = (prompt: string, maxLength: number = 60) => {
-  return prompt.length > maxLength
-    ? prompt.substring(0, maxLength) + '...'
-    : prompt;
+  // For older dates, show formatted date
+  return format(date, 'MMM d, yyyy');
 };
 
 export function HistorySidebar({
   sessions,
   selectedSessionId,
-  onSessionSelect,
-  onNewSession,
 }: HistorySidebarProps) {
+  const router = useRouter();
+
   const sortedSessions = [...sessions].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()
   );
+
+  const onSessionSelect = (session: Session) => {
+    router.push(`/session/${session.id}`);
+  };
+
+  const onNewSession = () => {
+    router.push('/');
+  };
 
   return (
     <Sidebar
@@ -129,22 +135,31 @@ export function HistorySidebar({
                         isActive={selectedSessionId === session.id}
                         onClick={() => onSessionSelect(session)}
                         className='w-full justify-start text-left p-3 h-auto'
-                        tooltip={session.prompt}
+                        tooltip={`Session ${session.id.slice(0, 8)}`}
                       >
                         <div className='flex-1 min-w-0'>
                           <div className='flex items-start justify-between mb-1'>
                             <p className='text-sm font-medium text-monochrome-pure-white truncate'>
-                              {truncatePrompt(session.prompt, 40)}
+                              Session {session.id.slice(0, 8)}
                             </p>
                           </div>
                           <div className='flex items-center justify-between'>
                             <span className='text-xs text-monochrome-silver font-light flex items-center space-x-1'>
                               <Calendar className='w-3 h-3' />
-                              <span>{formatDate(session.createdAt)}</span>
+                              <span>
+                                {formatDate(session.updatedAt.getTime())}
+                              </span>
                             </span>
                             <span className='text-xs text-monochrome-ash bg-monochrome-graphite/30 px-2 py-0.5 rounded-full'>
-                              {session.charts.length} chart
-                              {session.charts.length !== 1 ? 's' : ''}
+                              {(() => {
+                                // Count results that have charts (completed results)
+                                const completedResults = session.results.filter(
+                                  (result) =>
+                                    result.charts && result.charts.length > 0
+                                ).length;
+
+                                return `${completedResults} result${completedResults !== 1 ? 's' : ''}`;
+                              })()}
                             </span>
                           </div>
                         </div>

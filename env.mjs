@@ -1,13 +1,11 @@
 import { createEnv } from '@t3-oss/env-nextjs';
 import { z } from 'zod';
-import { AIProvider } from './app/enum/ai';
+import { AIProvider } from './app/enum';
 
 export const env = createEnv({
   server: {
     // AI Provider selection
-    AI_PROVIDER: z
-      .enum([AIProvider.GOOGLE, AIProvider.OPENROUTER])
-      .default(AIProvider.GOOGLE),
+    AI_PROVIDER: z.nativeEnum(AIProvider).default(AIProvider.GOOGLE),
 
     OPENROUTER_API_KEY: z.string().optional(),
     GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),

@@ -1,5 +1,5 @@
 import { generateObject } from 'ai';
-import { supportedChartTypes } from '@/lib/chart-types';
+import { ChartType } from '@/app/enum/chart-types';
 import { mermaidSchema, batchMermaidRequestSchema } from '../schema';
 import { createAIModel } from '@/lib/ai-provider';
 import { env } from '@/env.mjs';
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
 
   // Validate all chart types are supported
   for (const chart of charts) {
-    if (!supportedChartTypes.includes(chart.chartType)) {
+    if (!Object.values(ChartType).includes(chart.chartType as ChartType)) {
       return new Response(`Unsupported chart type: ${chart.chartType}`, {
         status: 400,
       });

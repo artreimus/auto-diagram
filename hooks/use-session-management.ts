@@ -1,194 +1,372 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { nanoid } from 'nanoid';
-import {
-  HistoryChart,
-  HistorySession,
-  historySessionSchema,
-} from '@/app/lib/history';
+import { Session, sessionSchema, Chart, Result } from '@/lib/session-schema';
+import { ChartSource, ResultStatus } from '@/app/enum/session';
 
-interface ChartResult {
-  plan: any;
-  mermaidResult?: any;
-  fixResult?: any;
-  finalChart?: string;
-  error?: string;
-  status?: string;
+const SESSIONS_STORAGE_KEY = 'sessions';
+
+// Helper functions for session storage
+const getSessionsFromStorage = (): Session[] => {
+  try {
+    const data = localStorage.getItem(SESSIONS_STORAGE_KEY);
+    if (!data) return [];
+    const sessions = JSON.parse(data);
+    return Array.isArray(sessions) ? sessions : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveSessionsToStorage = (sessions: Session[]): void => {
+  try {
+    localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(sessions));
+  } catch (error) {
+    console.error('Failed to save sessions to localStorage:', error);
+    throw new Error('Failed to save sessions');
+  }
+};
+
+// Helper functions for session finding
+const findSessionById = (sessions: Session[], sessionId: string): Session => {
+  const session = sessions.find((s) => s.id === sessionId);
+  if (!session) {
+    throw new Error('Session not found');
+  }
+  return session;
+};
+
+const findSessionIndexById = (
+  sessions: Session[],
+  sessionId: string
+): number => {
+  const index = sessions.findIndex((s) => s.id === sessionId);
+  if (index === -1) {
+    throw new Error('Session not found');
+  }
+  return index;
+};
+
+interface SessionHookReturn {
+  // Core session management
+  createSession: () => Promise<string>;
+  syncSession: (sessionId: string, updates: Partial<Session>) => Promise<void>;
+  addResult: (
+    sessionId: string,
+    prompt: string,
+    chartData: {
+      chart: string;
+      ratio: string;
+      source: ChartSource;
+      error?: string;
+      plan: Chart['plan'];
+    }
+  ) => Promise<string>;
+  addChartVersion: (
+    sessionId: string,
+    chartId: string,
+    chartData: {
+      chart: string;
+      ratio: string;
+      source: ChartSource;
+      error?: string;
+      plan: Chart['plan'];
+    }
+  ) => Promise<void>;
+
+  // Loading and browsing
+  loadSession: (sessionId: string) => Promise<Session | null>;
+  getAllSessions: () => Promise<Session[]>;
+
+  // State
+  currentSessionId: string | null;
+  isLoading: boolean;
+  error: string | null;
 }
 
-interface SessionData {
-  prompt: string;
-  status:
-    | 'planning'
-    | 'charts_generating'
-    | 'charts_completed'
-    | 'manual_fix_completed'
-    | 'completed';
-  timestamp: number;
-  updatedAt?: number;
-  completedAt?: number;
-
-  // Data that gets populated progressively via onFinish callbacks
-  plannedCharts?: any[] | null;
-  batchMermaidResults?: any[] | null;
-  chartResults?: ChartResult[];
-  finalChartResults?: ChartResult[];
-
-  // Metrics populated on completion
-  aiSdkMetrics?: {
-    plannerStreamDuration: number;
-    batchGenerationTime: number;
-    individualFixCount: number;
-    totalApiCalls: number;
-  };
-}
-
-export function useSessionManagement() {
-  const router = useRouter();
+export function useSessionManagement(): SessionHookReturn {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Create session immediately with initial data
-  const createSession = useCallback(
-    async (initialData: Partial<SessionData>): Promise<string> => {
+  // Create new session
+  const createSession = useCallback(async (): Promise<string> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
       const sessionId = nanoid();
-      const sessionData: SessionData = {
-        prompt: '',
-        status: 'planning',
-        timestamp: Date.now(),
-        ...initialData,
+      const now = Date.now();
+
+      const newSession: Session = {
+        id: sessionId,
+        results: [],
+        createdAt: new Date(now),
+        updatedAt: new Date(now),
       };
 
-      localStorage.setItem(`session-${sessionId}`, JSON.stringify(sessionData));
+      // Validate before saving
+      const validatedSession = sessionSchema.parse(newSession);
 
-      // Also update recent sessions list
-      const recentSessions = JSON.parse(
-        localStorage.getItem('recent-sessions') || '[]'
-      );
-      recentSessions.unshift({
-        id: sessionId,
-        prompt: sessionData.prompt,
-        timestamp: sessionData.timestamp,
-        status: sessionData.status,
-      });
+      // Get existing sessions and add new one
+      const existingSessions = getSessionsFromStorage();
+      const updatedSessions = [...existingSessions, validatedSession];
 
-      // Keep only last 10 sessions
-      const limitedSessions = recentSessions.slice(0, 10);
-      localStorage.setItem('recent-sessions', JSON.stringify(limitedSessions));
+      // Save all sessions to single storage key
+      saveSessionsToStorage(updatedSessions);
 
       setCurrentSessionId(sessionId);
       return sessionId;
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to create session';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Advanced sync with phase tracking and validation
+  const syncSession = useCallback(
+    async (sessionId: string, updates: Partial<Session>): Promise<void> => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        // Get all sessions from consolidated storage
+        const existingSessions = getSessionsFromStorage();
+        const sessionIndex = findSessionIndexById(existingSessions, sessionId);
+
+        const currentSession = existingSessions[sessionIndex];
+        const now = Date.now();
+
+        const updatedSession: Session = {
+          ...currentSession,
+          ...updates,
+          updatedAt: new Date(now),
+        };
+
+        // Validate before saving
+        const validatedSession = sessionSchema.parse(updatedSession);
+
+        // Update session in array and save all sessions
+        const updatedSessions = [...existingSessions];
+        updatedSessions[sessionIndex] = validatedSession;
+        saveSessionsToStorage(updatedSessions);
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to sync session';
+        setError(errorMessage);
+        throw new Error(errorMessage);
+      } finally {
+        setIsLoading(false);
+      }
     },
     []
   );
 
-  // Sync session data - optimized for onFinish callbacks
-  const syncSession = useCallback(
-    (sessionId: string, updates: Partial<SessionData>) => {
-      const existingData = localStorage.getItem(`session-${sessionId}`);
-      if (!existingData) return;
+  // Add a new result to session
+  const addResult = useCallback(
+    async (
+      sessionId: string,
+      prompt: string,
+      chartData: {
+        chart: string;
+        ratio: string;
+        source: ChartSource;
+        error?: string;
+        plan: Chart['plan'];
+      }
+    ): Promise<string> => {
+      setIsLoading(true);
+      setError(null);
 
-      const currentData: SessionData = JSON.parse(existingData);
-      const updatedData: SessionData = {
-        ...currentData,
-        ...updates,
-        updatedAt: Date.now(),
-      };
+      try {
+        // Get all sessions from consolidated storage
+        const existingSessions = getSessionsFromStorage();
+        const session = findSessionById(existingSessions, sessionId);
 
-      localStorage.setItem(`session-${sessionId}`, JSON.stringify(updatedData));
+        const resultId = nanoid();
+        const now = new Date();
 
-      // Update recent sessions list with new status
-      const recentSessions = JSON.parse(
-        localStorage.getItem('recent-sessions') || '[]'
-      );
-      const updatedRecents = recentSessions.map(
-        (session: { id: string; status: string; updatedAt?: number }) =>
-          session.id === sessionId
-            ? {
-                ...session,
-                status: updatedData.status,
-                updatedAt: updatedData.updatedAt,
-              }
-            : session
-      );
-      localStorage.setItem('recent-sessions', JSON.stringify(updatedRecents));
+        const newChart: Chart = {
+          chart: chartData.chart,
+          ratio: chartData.ratio,
+          source: chartData.source,
+          error: chartData.error,
+          plan: chartData.plan,
+          version: 1,
+          createdAt: now,
+        };
 
-      // If session is completed, also save to legacy chart-history format for compatibility
-      if (updatedData.status === 'completed' && updatedData.finalChartResults) {
-        const historyCharts: HistoryChart[] = updatedData.finalChartResults
-          .filter((result) => result.finalChart)
-          .map((result) => ({
-            plan: result.plan,
-            mermaid: {
-              type: result.plan.type,
-              description: result.plan.description,
-              chart: result.finalChart!,
-              explanation:
-                result.fixResult?.explanation ||
-                result.mermaidResult?.explanation,
-            },
-            fixAttempts: [], // Could be enhanced to include fix attempts
-            finalError: result.error || null,
-          }));
+        const newResult: Result = {
+          id: resultId,
+          prompt,
+          charts: [newChart],
+          currentVersion: 1,
+          status: chartData.error ? ResultStatus.ERROR : ResultStatus.COMPLETED,
+          createdAt: now,
+          updatedAt: now,
+        };
 
-        if (historyCharts.length > 0) {
-          const newSession: HistorySession = {
-            id: sessionId,
-            prompt: updatedData.prompt,
-            createdAt: new Date(updatedData.timestamp).toISOString(),
-            charts: historyCharts,
-          };
+        // Update session with new result
+        const updatedResults = [...session.results, newResult];
+        await syncSession(sessionId, {
+          results: updatedResults,
+        });
 
-          // Validate and save to legacy format
-          const validation = historySessionSchema.safeParse(newSession);
-          if (validation.success) {
-            try {
-              const saved = localStorage.getItem('chart-history');
-              const history: HistorySession[] = saved ? JSON.parse(saved) : [];
-              const newHistory = [...history, validation.data];
-              localStorage.setItem('chart-history', JSON.stringify(newHistory));
-
-              // Dispatch custom event to notify ClientLayout
-              window.dispatchEvent(new CustomEvent('chart-history-updated'));
-
-              // Navigate to session page
-              router.push(`/session/${sessionId}`);
-            } catch (error) {
-              console.error('Failed to save to legacy format:', error);
-            }
-          }
-        }
+        return resultId;
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to add result';
+        setError(errorMessage);
+        throw new Error(errorMessage);
+      } finally {
+        setIsLoading(false);
       }
     },
-    [router]
+    [syncSession]
   );
 
-  // Load session data
-  const loadSession = useCallback((sessionId: string): SessionData | null => {
-    const data = localStorage.getItem(`session-${sessionId}`);
-    return data ? JSON.parse(data) : null;
-  }, []);
+  // Add new chart version (for fixes)
+  const addChartVersion = useCallback(
+    async (
+      sessionId: string,
+      chartId: string,
+      chartData: {
+        chart: string;
+        ratio: string;
+        source: ChartSource;
+        error?: string;
+        plan: Chart['plan'];
+      }
+    ): Promise<void> => {
+      setIsLoading(true);
 
-  // Get recent sessions
-  const getRecentSessions = useCallback(() => {
-    return JSON.parse(localStorage.getItem('recent-sessions') || '[]');
-  }, []);
+      try {
+        // Get all sessions from consolidated storage
+        const existingSessions = getSessionsFromStorage();
+        const session = findSessionById(existingSessions, sessionId);
 
-  // Legacy method for backward compatibility
-  const createNewSession = useCallback(() => {
-    const sessionId = nanoid();
-    setCurrentSessionId(sessionId);
-    return sessionId;
+        const resultIndex = session.results.findIndex(
+          (result) => result.id === chartId
+        );
+        if (resultIndex === -1) throw new Error('Result not found');
+
+        const result = session.results[resultIndex];
+        const newVersionNumber =
+          Math.max(...result.charts.map((v) => v.version)) + 1;
+
+        const newVersion: Chart = {
+          chart: chartData.chart,
+          ratio: chartData.ratio,
+          source: chartData.source,
+          error: chartData.error,
+          plan: chartData.plan,
+          version: newVersionNumber,
+          createdAt: new Date(),
+        };
+
+        // Update result with new version
+        const updatedResult: Result = {
+          ...result,
+          charts: [...result.charts, newVersion],
+          currentVersion: newVersionNumber,
+          status: chartData.error ? ResultStatus.ERROR : ResultStatus.COMPLETED,
+          updatedAt: new Date(),
+        };
+
+        // Update session
+        const updatedResults = [...session.results];
+        updatedResults[resultIndex] = updatedResult;
+
+        await syncSession(sessionId, {
+          results: updatedResults,
+        });
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to add chart version';
+        setError(errorMessage);
+        throw new Error(errorMessage);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [syncSession]
+  );
+
+  // Load session with validation
+  const loadSession = useCallback(
+    async (sessionId: string): Promise<Session | null> => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        // Get all sessions from consolidated storage
+        const existingSessions = getSessionsFromStorage();
+        const session = existingSessions.find((s) => s.id === sessionId);
+
+        if (!session) return null;
+
+        // Validate schema
+        const validatedSession = sessionSchema.parse(session);
+        return validatedSession;
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to load session';
+        setError(errorMessage);
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
+  // Get all sessions from consolidated storage
+  const getAllSessions = useCallback(async (): Promise<Session[]> => {
+    setIsLoading(true);
+
+    try {
+      // Get all sessions from consolidated storage
+      const sessions = getSessionsFromStorage();
+
+      // Validate each session
+      const validatedSessions = sessions
+        .map((session) => {
+          try {
+            return sessionSchema.parse(session);
+          } catch (error) {
+            console.error(`Failed to validate session ${session.id}:`, error);
+            return null;
+          }
+        })
+        .filter((session): session is Session => session !== null);
+
+      // Sort by updatedAt (most recent first)
+      validatedSessions.sort(
+        (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()
+      );
+      return validatedSessions;
+    } catch {
+      setError('Failed to load sessions');
+      return [];
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   return {
-    currentSessionId,
     createSession,
     syncSession,
+    addResult,
+    addChartVersion,
     loadSession,
-    getRecentSessions,
-    // Legacy compatibility
-    createNewSession,
+    getAllSessions,
+    currentSessionId,
+    isLoading,
+    error,
   };
 }
