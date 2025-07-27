@@ -66,10 +66,10 @@ export function HistorySidebar({
   };
 
   return (
-    <Sidebar
-      side='left'
-      variant='sidebar'
-      className='bg-monochrome-charcoal/95 backdrop-blur-xl border-r border-monochrome-pewter/20'
+    <Sidebar 
+      side='left' 
+      variant='sidebar' 
+      className='bg-monochrome-charcoal border-r border-monochrome-pewter/20 [&_[data-mobile="true"]]:!bg-monochrome-charcoal'
     >
       <SidebarHeader className='border-b border-monochrome-pewter/20'>
         <motion.div
@@ -104,7 +104,7 @@ export function HistorySidebar({
         </motion.div>
       </SidebarHeader>
 
-      <SidebarContent className='bg-transparent'>
+      <SidebarContent className='bg-monochrome-charcoal'>
         <SidebarGroup>
           <SidebarGroupLabel className='flex items-center space-x-2 text-monochrome-silver'>
             <Clock className='w-4 h-4' />
