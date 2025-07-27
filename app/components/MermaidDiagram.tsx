@@ -178,7 +178,7 @@ const MermaidDiagram = ({
 
       const serializer = new XMLSerializer();
       const svgString = serializer.serializeToString(clonedSvg);
-      const svgDataUrl = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgString)))}`;
+      const svgDataUrl = `data:image/svg+xml;base64,${btoa(encodeURIComponent(svgString))}`;
 
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
@@ -281,7 +281,7 @@ const MermaidDiagram = ({
       {planDescription && (
         <div className='mb-6 p-4 bg-monochrome-charcoal/5 border border-monochrome-pewter/20 rounded-xl'>
           <h4 className='text-lg font-medium text-monochrome-cloud mb-3'>
-            Chart Plan
+            Description
           </h4>
           <div className='text-monochrome-silver font-light leading-loose text-sm tracking-wide prose prose-sm prose-invert max-w-none'>
             <ReactMarkdown
@@ -363,17 +363,17 @@ const MermaidDiagram = ({
         </motion.button>
       </div>
 
-      {/* Syntax display with sophisticated styling */}
+      {/* Syntax display with sophisticated styling and ReactMarkdown */}
       <AnimatePresence>
         {showSyntax && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className='border border-monochrome-pewter/20 bg-monochrome-charcoal/5 rounded-2xl overflow-hidden backdrop-blur-sm'
+            initial={{ opacity: 0, height: 0, y: -20 }}
+            animate={{ opacity: 1, height: 'auto', y: 0 }}
+            exit={{ opacity: 0, height: 0, y: -20 }}
+            transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+            className='border border-monochrome-pewter/20 bg-monochrome-charcoal/5 rounded-2xl overflow-hidden backdrop-blur-sm shadow-lg'
           >
-            <div className='px-6 py-3 border-b border-monochrome-pewter/20 bg-monochrome-graphite/10 flex justify-between items-center'>
+            <div className='px-6 py-4 border-b border-monochrome-pewter/20 bg-monochrome-graphite/10 flex justify-between items-center'>
               <span className='text-sm font-medium text-monochrome-cloud tracking-wide'>
                 Mermaid Source Code
               </span>
@@ -386,9 +386,91 @@ const MermaidDiagram = ({
                 {copySuccess ? 'Copied!' : 'Copy'}
               </motion.button>
             </div>
-            <pre className='p-6 text-sm whitespace-pre-wrap font-mono text-monochrome-silver leading-relaxed overflow-auto max-h-80'>
-              {chart}
-            </pre>
+            <div className='max-h-96 overflow-y-auto scrollbar-thin scrollbar-track-monochrome-charcoal/10 scrollbar-thumb-monochrome-pewter/30 hover:scrollbar-thumb-monochrome-pewter/50'>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3, delay: 0.1 }}
+                className='p-6 max-w-none'
+              >
+                <ReactMarkdown
+                  components={{
+                    code: ({ children, className }) => {
+                      const isBlock = className?.includes('language-');
+                      if (isBlock) {
+                        return (
+                          <pre className='bg-monochrome-graphite/20 rounded-lg p-4 overflow-x-auto text-sm font-mono text-monochrome-silver leading-relaxed whitespace-pre-wrap break-words'>
+                            <code className='text-monochrome-silver'>
+                              {children}
+                            </code>
+                          </pre>
+                        );
+                      }
+                      return (
+                        <code className='bg-monochrome-graphite/30 px-2 py-1 rounded text-monochrome-pearl font-mono text-xs'>
+                          {children}
+                        </code>
+                      );
+                    },
+                    pre: ({ children }) => (
+                      <div className='bg-monochrome-graphite/20 rounded-lg p-4 overflow-x-auto'>
+                        {children}
+                      </div>
+                    ),
+                    p: ({ children }) => (
+                      <p className='mb-3 last:mb-0 text-monochrome-silver leading-relaxed'>
+                        {children}
+                      </p>
+                    ),
+                    strong: ({ children }) => (
+                      <strong className='font-medium text-monochrome-cloud'>
+                        {children}
+                      </strong>
+                    ),
+                    em: ({ children }) => (
+                      <em className='italic text-monochrome-pearl'>
+                        {children}
+                      </em>
+                    ),
+                    h1: ({ children }) => (
+                      <h1 className='text-lg font-medium text-monochrome-pure-white mb-4 mt-6 first:mt-0'>
+                        {children}
+                      </h1>
+                    ),
+                    h2: ({ children }) => (
+                      <h2 className='text-base font-medium text-monochrome-pure-white mb-3 mt-5 first:mt-0'>
+                        {children}
+                      </h2>
+                    ),
+                    h3: ({ children }) => (
+                      <h3 className='text-sm font-medium text-monochrome-cloud mb-2 mt-4 first:mt-0'>
+                        {children}
+                      </h3>
+                    ),
+                    ul: ({ children }) => (
+                      <ul className='list-disc list-inside space-y-2 mb-4 text-monochrome-silver'>
+                        {children}
+                      </ul>
+                    ),
+                    ol: ({ children }) => (
+                      <ol className='list-decimal list-inside space-y-2 mb-4 text-monochrome-silver'>
+                        {children}
+                      </ol>
+                    ),
+                    li: ({ children }) => (
+                      <li className='text-sm leading-relaxed'>{children}</li>
+                    ),
+                    blockquote: ({ children }) => (
+                      <blockquote className='border-l-3 border-monochrome-pewter/40 pl-4 italic text-monochrome-silver/90 mb-4 bg-monochrome-charcoal/10 py-2 rounded-r-lg'>
+                        {children}
+                      </blockquote>
+                    ),
+                  }}
+                >
+                  {`\`\`\`mermaid\n${chart}\n\`\`\``}
+                </ReactMarkdown>
+              </motion.div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
