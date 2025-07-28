@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { ChartType } from '@/app/enum/chart-types';
 
-export const chartPlanSchema = z.object({
+export const planSchema = z.object({
   type: z.nativeEnum(ChartType).describe('The type of chart to generate.'),
   description: z
     .string()
@@ -10,12 +10,7 @@ export const chartPlanSchema = z.object({
     ),
 });
 
-export type ChartPlan = z.infer<typeof chartPlanSchema>;
+export type Plan = z.infer<typeof planSchema>;
 
-// For backend array streaming: schema for individual elements
-export { chartPlanSchema as plannerElementSchema };
-
-// For frontend: schema for the complete array
-export const plannerSchema = z.array(chartPlanSchema);
-
-export type PlannerResponse = ChartPlan[];
+export const plansSchema = z.array(planSchema);
+export type Plans = z.infer<typeof plansSchema>;
