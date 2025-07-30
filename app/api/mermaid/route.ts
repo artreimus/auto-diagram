@@ -1,9 +1,10 @@
 import { streamObject } from 'ai';
-import { ChartType } from '@/app/enum/chart-types';
 import { mermaidSchema, mermaidRequestSchema } from './schema';
 import { createAIModel } from '@/lib/ai-provider';
-import { env } from '@/env.mjs';
-import { createMermaidGenerationPrompt } from '@/lib/prompt-utils';
+import {
+  createMermaidGenerationSystemPrompt,
+  createMermaidGenerationUserPrompt,
+} from '@/lib/prompt-utils';
 
 export async function POST(req: Request) {
   const body = await req.json();
@@ -16,16 +17,10 @@ export async function POST(req: Request) {
     });
   }
 
-  const { messages, chartType, originalUserMessage, planDescription } =
-    validation.data;
+  const { chartType, originalUserMessage, planDescription } = validation.data;
 
-  if (!Object.values(ChartType).includes(chartType as ChartType)) {
-    return new Response(`Unsupported chart type: ${chartType}`, {
-      status: 400,
-    });
-  }
-
-  const systemPrompt = await createMermaidGenerationPrompt(
+  const systemPrompt = createMermaidGenerationSystemPrompt();
+  const userPrompt = createMermaidGenerationUserPrompt(
     chartType,
     originalUserMessage,
     planDescription
@@ -33,9 +28,14 @@ export async function POST(req: Request) {
 
   const result = streamObject({
     schema: mermaidSchema,
-    model: createAIModel('fast', env.AI_PROVIDER),
+    model: createAIModel('fast'),
     system: systemPrompt,
-    messages,
+    messages: [
+      {
+        role: 'user',
+        content: userPrompt,
+      },
+    ],
   });
 
   return result.toTextStreamResponse();
