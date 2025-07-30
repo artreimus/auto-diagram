@@ -11,36 +11,37 @@ export const mermaidSchema = z.object({
 
 export type MermaidChart = z.infer<typeof mermaidSchema>;
 
-// Schema for batch mermaid generation requests
+export const mermaidRequestSchema = z.object({
+  chartType: z.nativeEnum(ChartType),
+  originalUserMessage: z
+    .string()
+    .describe('The original user query that started this session'),
+  planDescription: z
+    .string()
+    .describe('The specific plan description for this chart'),
+});
+
+export type MermaidRequest = z.infer<typeof mermaidRequestSchema>;
+
+export const mermaidResponseSchema = z.object({
+  chart: mermaidSchema,
+  id: z.string().nanoid(),
+});
+
+export type MermaidResponse = z.infer<typeof mermaidResponseSchema>;
+
 export const batchMermaidRequestSchema = z.object({
-  charts: z.array(
-    z.object({
-      chartType: z.nativeEnum(ChartType),
-      originalUserMessage: z
-        .string()
-        .describe('The original user query that started this session'),
-      planDescription: z
-        .string()
-        .describe('The specific plan description for this chart'),
-    })
-  ),
+  charts: z.array(mermaidRequestSchema),
 });
 
 export type BatchMermaidRequest = z.infer<typeof batchMermaidRequestSchema>;
 
-// Schema for batch mermaid generation responses
 export const batchMermaidResponseSchema = z.object({
-  results: z.array(
-    z.object({
-      chart: mermaidSchema,
-      id: z.string().nanoid(),
-    })
-  ),
+  results: z.array(mermaidResponseSchema),
 });
 
 export type BatchMermaidResponse = z.infer<typeof batchMermaidResponseSchema>;
 
-// Schema for fix requests that include original context
 export const mermaidFixRequestSchema = z.object({
   chartType: z.nativeEnum(ChartType),
   chart: z.string().describe('The broken Mermaid chart code'),

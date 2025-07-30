@@ -1,167 +1,284 @@
+import { PromptTemplate } from './prompt-template';
 import { ChartType } from '@/app/enum/chart-types';
-import { promises as fs } from 'fs';
-import { join } from 'path';
 
-/**
- * Template variables that can be replaced in prompts
- */
-export interface PromptVariables {
-  [key: string]: string | number | boolean | string[] | readonly string[];
+// Mermaid Best Practices
+export const mermaidBestPractices = `# Mermaid Syntax That Renders Reliably in React (with \`mermaid\` npm)
+
+> Practical, render-safe syntax notes and examples for every major Mermaid diagram, plus integration patterns for React using \`mermaid.run\`, \`mermaid.render\`, and \`mermaid.parse\`.
+
+---
+
+## 1) Golden rules to avoid "invalid syntax"
+
+1. **Always start with a diagram type keyword.** The first non‑empty line must declare the type (e.g., \`flowchart\`, \`sequenceDiagram\`, \`classDiagram\`, \`erDiagram\`, \`gantt\`, \`pie\`, \`gitGraph\`, \`stateDiagram\`, \`journey\`, \`quadrantChart\`, \`timeline\`, \`mindmap\`, \`sankey\`, \`xychart\`, \`block\`, \`packet\`, \`kanban\`, \`architecture\`, \`radar\`, \`treemap\`).
+2. **Use comments carefully.** Line comments start with \`%%\`. Do **not** include \`{}\` braces inside comments; they can be mistaken for directives. Prefer plain comments like \`%% this is fine\`.
+3. **Quote fragile labels.** Wrap labels containing keywords like \`end\`, braces, brackets, colons, pipes, or markdown in \`"double quotes"\`. Lowercase \`end\` as a node label breaks flowcharts and sequence diagrams—use \`"end"\`, \`End\`, or \`END\`.
+4. **One statement per line (or use semicolons).** Mermaid accepts semicolons as line separators. If you inline statements, ensure each is fully formed.
+5. **No "nodes inside nodes."** Don't nest brackets/braces that look like another node inside a node's text. Quote the whole label instead.
+6. **Directives & frontmatter come first.**
+   - **Frontmatter YAML** must begin at line 1, delimited by \`---\` lines.
+   - **Directives** use \`%%{ }%%\` and must contain valid JSON.
+
+7. **Prefer ASCII.** Use quotes around Unicode text. For sequence messages, escape special characters with HTML entities if needed (e.g., \`#35;\` for \`#\`, \`#59;\` for \`;\`).
+8. **Pick one orientation/layout directive per diagram.** For flowcharts/state diagrams: \`TB\`, \`TD\`, \`BT\`, \`LR\`, \`RL\`. Don't mix.
+9. **Keep IDs simple.** Node/actor/class IDs: letters, digits, underscores. Use bracketed text for the display label.
+10. **Validate before rendering.** In React, call \`await mermaid.parse(code)\` and only render when it returns truthy; surface parser errors to the UI.
+
+---
+
+## Common parse errors & fixes
+
+| Error / Symptom                   | Likely Cause                                                          | Fix                                                                                  |
+| --------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| \`Parse error on line X\`           | Missing diagram header, unmatched brackets, or stray characters.      | Ensure the first line is the diagram type; check each node/edge token; quote labels. |
+| Nothing renders, no error         | \`run()\` not called, or \`startOnLoad:true\` with server-side rendering. | In React, call \`initialize({startOnLoad:false})\` then \`await run()\` or \`render()\`.   |
+| Comments break rendering          | \`%%\` comments containing \`{}\`.                                        | Remove braces or convert to quoted labels.                                           |
+| Links/clicks ignored              | \`securityLevel\` too strict.                                           | Set \`securityLevel: 'loose'\` or \`antiscript\`; avoid for untrusted input.             |
+| Lowercase \`end\` node label breaks | Reserved keyword in flowchart/sequence.                               | Use \`"end"\`, \`End\`, or different text.                                               |
+
+Always ensure your Mermaid syntax is correct and follows the official Mermaid documentation. Use proper escaping for newlines (\\n) in the chart field.`;
+
+// Mermaid Generation System Prompt
+export const mermaidGenerationSystemTemplate = PromptTemplate.create`# Mermaid Generation System Prompt
+
+You are an expert at creating Mermaid diagrams. You are a generator agent that creates a Mermaid chart based on the user's request.
+
+You must respond with a JSON object containing exactly three fields:
+
+- "type": the chart type (must match the requested type)
+- "description": a brief explanation of what the chart shows
+- "chart": the complete Mermaid diagram code
+
+Here are examples for different chart types:
+
+For flowchart:
+{
+"type": "flowchart",
+"description": "A flowchart showing the user login process with validation and error handling",
+"chart": "flowchart TD\\n A[User enters credentials] --> B{Valid credentials?}\\n B -->|Yes| C[Login successful]\\n B -->|No| D[Show error message]\\n D --> A\\n C --> E[Redirect to dashboard]"
 }
 
-/**
- * Cache for loaded prompt templates
- */
-const promptCache = new Map<string, string>();
-
-/**
- * Loads a prompt template from the prompts directory
- */
-async function loadPromptTemplate(templateName: string): Promise<string> {
-  if (promptCache.has(templateName)) {
-    return promptCache.get(templateName)!;
-  }
-
-  try {
-    const promptPath = join(process.cwd(), 'prompts', `${templateName}.md`);
-    const template = await fs.readFile(promptPath, 'utf-8');
-    promptCache.set(templateName, template);
-    return template;
-  } catch (error) {
-    console.error(`Failed to load prompt template ${templateName}:`, error);
-    throw new Error(`Failed to load prompt template: ${templateName}`);
-  }
+For sequence:
+{
+"type": "sequence",
+"description": "A sequence diagram showing user authentication flow between client, server, and database",
+"chart": "sequenceDiagram\\n participant U as User\\n participant C as Client\\n participant S as Server\\n participant D as Database\\n U->>C: Enter credentials\\n C->>S: Login request\\n S->>D: Validate user\\n D-->>S: User data\\n S-->>C: Authentication token\\n C-->>U: Login success"
 }
 
-/**
- * Renders a template by replacing variables with actual values
- */
-function renderTemplate(template: string, variables: PromptVariables): string {
-  let rendered = template;
-
-  // Replace template variables in the format {{variableName}}
-  for (const [key, value] of Object.entries(variables)) {
-    const placeholder = `{{${key}}}`;
-    let replacement: string;
-
-    if (Array.isArray(value)) {
-      replacement = value.join(', ');
-    } else {
-      replacement = String(value);
-    }
-
-    rendered = rendered.replace(
-      new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'),
-      replacement
-    );
-  }
-
-  return rendered;
+For class:
+{
+"type": "class",
+"description": "A class diagram showing the structure of a user management system",
+"chart": "classDiagram\\n class User {\\n +String name\\n +String email\\n +String password\\n +login()\\n +logout()\\n }\\n class UserManager {\\n +createUser()\\n +deleteUser()\\n +updateUser()\\n }\\n UserManager --> User : manages"
 }
 
-/**
- * Creates the mermaid generation system prompt
- */
-export async function createMermaidGenerationPrompt(
+For gantt:
+{
+"type": "gantt",
+"description": "A Gantt chart showing project timeline with tasks and dependencies",
+"chart": "gantt\\n title Project Timeline\\n dateFormat YYYY-MM-DD\\n section Planning\\n Requirements :a1, 2024-01-01, 5d\\n Design :a2, after a1, 7d\\n section Development\\n Frontend :a3, after a2, 10d\\n Backend :a4, after a2, 12d\\n Testing :a5, after a3, 5d"
+}
+
+For state:
+{
+"type": "state",
+"description": "A state diagram showing the lifecycle of a user session",
+"chart": "stateDiagram-v2\\n [*] --> LoggedOut\\n LoggedOut --> LoggingIn : login()\\n LoggingIn --> LoggedIn : success\\n LoggingIn --> LoggedOut : failure\\n LoggedIn --> LoggedOut : logout()\\n LoggedIn --> [*]"
+}
+
+Always ensure your Mermaid syntax is correct and follows the official Mermaid documentation. Use proper escaping for newlines (\\n) in the chart field.
+
+${mermaidBestPractices}`;
+
+// Mermaid Generation User Prompt
+export const mermaidGenerationUserTemplate = PromptTemplate.create<{
+  chartType: string;
+  originalUserMessage: string;
+  planDescription: string;
+  hasOriginalMessage: string;
+  hasPlanDescription: string;
+  hasInstructions: string;
+}>`Generate a **${'chartType'}** chart based on the following request:
+
+${'hasOriginalMessage'}
+
+${'hasPlanDescription'}
+
+${'hasInstructions'}
+
+Create the Mermaid diagram now.`;
+
+// Mermaid Fix System Prompt
+export const mermaidFixSystemTemplate = PromptTemplate.create`You are an expert at debugging and fixing Mermaid diagram syntax errors. Your job is to fix ONLY the syntax errors and return a corrected Mermaid chart.
+
+## CRITICAL RULES FOR SYNTAX FIXING:
+
+1. **PRESERVE ORIGINAL CONTENT:** Keep the overall structure, logic, and content EXACTLY as intended
+2. **FIX SYNTAX ONLY:** Only correct syntax errors, don't change the meaning or add/remove content
+3. **MAINTAIN CHART TYPE:** Ensure the chart type matches the specified type
+4. **VALID MERMAID:** The chart must be valid Mermaid syntax that will render without errors
+5. **NO CONTENT CHANGES:** Do not alter node names, relationships, or flow logic unless they cause syntax errors
+6. **PRESERVE INTENT:** The fixed chart should accomplish exactly the same visualization goal as the broken one
+
+You must respond with a JSON object containing exactly four fields:
+
+- "type": the chart type (must match the requested type)
+- "description": the description of what the chart shows (keep original intent)
+- "chart": the corrected Mermaid diagram code with ONLY syntax fixes
+- "explanation": a clear explanation of ONLY the syntax errors you found and how you fixed them
+
+## Common Mermaid syntax issues to watch for:
+
+- Missing or incorrect chart type declarations
+- Invalid node IDs or names (must be alphanumeric, underscores, or hyphens)
+- Incorrect arrow syntax
+- Missing quotes around text with special characters or spaces
+- Invalid subgraph syntax
+- Incorrect indentation
+- Missing semicolons where required
+- Invalid class or style definitions
+- Special characters in node IDs that need escaping
+- Malformed mindmap node syntax
+- Invalid sequence diagram participant names
+- Incorrect Gantt chart date formats
+
+**Remember:** This is SYNTAX REPAIR ONLY. Fix the code to render properly while preserving ALL original content and intent.
+
+${mermaidBestPractices}`;
+
+// Mermaid Fix User Prompt
+export const mermaidFixUserTemplate = PromptTemplate.create<{
+  chartType: string;
+  chart: string;
+  error: string;
+  hasPlanDescription: string;
+}>`Please fix ONLY the syntax errors in this **${'chartType'}** Mermaid chart. Do not change the content or meaning.
+
+${'hasPlanDescription'}
+
+## Original broken chart:
+
+\`\`\`
+${'chart'}
+\`\`\`
+
+## Error encountered:
+
+${'error'}
+
+Fix the syntax errors while preserving all original content and intent.`;
+
+// Planner System Prompt
+export const plannerSystemTemplate = PromptTemplate.create<{
+  supportedChartTypes: readonly string[];
+}>`You are an expert at creating Mermaid diagrams and planning comprehensive visualizations. You are a planner agent that suggests the required charts based on the user's request.
+
+CRITICAL: Your descriptions must be EXTREMELY DETAILED and COMPREHENSIVE. The more specific and verbose you are, the better the resulting Mermaid charts will be. Each description should be like a complete specification document that leaves no ambiguity about what should be visualized.
+
+**FORMATTING REQUIREMENT: Always format your descriptions using rich Markdown syntax including:**
+
+- **Bold text** for emphasis and key terms
+- _Italic text_ for secondary emphasis
+- \`Inline code\` for technical terms, variables, and specific values
+- Numbered and bulleted lists for structured information
+- Headers (##, ###) to organize sections
+- Code blocks for examples when relevant
+
+For each chart you suggest, provide:
+
+1. The chart type (must be one of the supported types)
+2. An EXTENSIVE, DETAILED description in **Markdown format** that includes:
+   - Specific entities, actors, or components to include
+   - Exact relationships and connections between elements
+   - Step-by-step processes or workflows
+   - Decision points and branching logic
+   - Data flow directions and dependencies
+   - Visual hierarchy and grouping suggestions
+   - Specific labels, titles, and text content
+   - Any conditional logic or alternative paths
+   - Technical details relevant to the visualization
+
+Your supported chart types are: ${'supportedChartTypes'}.
+
+You must respond with a direct array of objects. Each object must have exactly two fields:
+
+- "type": one of the supported chart types
+- "description": an EXTREMELY DETAILED specification for generating the chart
+
+**REMEMBER:** The more detailed and specific your descriptions are, the better the resulting Mermaid charts will be. Always err on the side of being overly verbose rather than too brief.`;
+
+// Planner User Prompt
+export const plannerUserTemplate = PromptTemplate.create`Analyze the following user request and suggest the appropriate Mermaid charts to visualize their needs.
+
+Plan comprehensive diagrams that fully address the user's requirements. Each chart should have a distinct purpose and together they should provide a complete visualization of the user's request.`;
+
+// Export functions to create prompts
+export function createMermaidGenerationSystemPrompt(): string {
+  return mermaidGenerationSystemTemplate.format({});
+}
+
+export function createMermaidGenerationUserPrompt(
   chartType: string,
-  originalUserMessage?: string,
-  planDescription?: string
-): Promise<string> {
-  const template = await loadPromptTemplate('mermaid-generation');
+  originalUserMessage = '',
+  planDescription = ''
+): string {
+  const hasOriginalMessage = originalUserMessage
+    ? `**Original User Request:**
+${originalUserMessage}`
+    : '';
 
-  // Build context section
-  const contextSection =
+  const hasPlanDescription = planDescription
+    ? `**Chart Plan:**
+${planDescription}`
+    : '';
+
+  const hasInstructions =
     originalUserMessage && planDescription
-      ? `
-
-ORIGINAL USER CONTEXT:
-The user originally asked: "${originalUserMessage}"
-
-SPECIFIC CHART PLAN:
-This chart should fulfill: "${planDescription}"
-
-IMPORTANT: Your chart must directly address the original user's question while specifically implementing the chart plan described above. Stay true to the original user's intent and the planned chart scope.`
+      ? `**Instructions:**
+Your chart must directly address the original user's question while specifically implementing the chart plan described above. Stay true to the original user's intent and the planned chart scope.`
       : '';
 
-  return renderTemplate(template, {
+  return mermaidGenerationUserTemplate.format({
     chartType,
-    contextSection,
+    originalUserMessage,
+    planDescription,
+    hasOriginalMessage,
+    hasPlanDescription,
+    hasInstructions,
   });
 }
 
-/**
- * Creates the mermaid fix system prompt
- */
-export async function createMermaidFixPrompt(
+export function createMermaidFixSystemPrompt(): string {
+  return mermaidFixSystemTemplate.format({});
+}
+
+export function createMermaidFixUserPrompt(
   chartType: string,
   chart: string,
   error: string,
-  originalUserMessage?: string,
-  planDescription?: string,
-  description?: string,
-  previousAttempts: Array<{
-    chart: string;
-    error: string;
-    explanation?: string;
-  }> = []
-): Promise<string> {
-  const template = await loadPromptTemplate('mermaid-fix');
-
-  // Build context section
-  const contextSection =
-    originalUserMessage && planDescription
-      ? `
-
-ORIGINAL USER CONTEXT:
-The user originally asked: "${originalUserMessage}"
-
-SPECIFIC CHART PLAN:
+  planDescription = ''
+): string {
+  const hasPlanDescription = planDescription
+    ? `**Chart Plan:**
 This chart should fulfill: "${planDescription}"
 
-CRITICAL: This is a SYNTAX FIX operation. DO NOT change the content, logic, or meaning of the chart. Only fix syntax errors to make it render properly while preserving the original intent.`
-      : '';
+**CRITICAL:** This is a SYNTAX FIX operation. DO NOT change the content, logic, or meaning of the chart. Only fix syntax errors to make it render properly while preserving the original intent.`
+    : '';
 
-  // Build previous attempts context
-  const previousAttemptsContext =
-    previousAttempts.length > 0
-      ? `\n\nPREVIOUS FIX ATTEMPTS:\n${previousAttempts
-          .map(
-            (attempt, index) =>
-              `Attempt ${index + 1}:\n` +
-              `Chart: ${attempt.chart}\n` +
-              `Error: ${attempt.error}\n` +
-              `Explanation: ${attempt.explanation || 'No explanation provided'}\n`
-          )
-          .join(
-            '\n---\n'
-          )}\n\nDO NOT repeat these same approaches. Learn from these failures and try a different approach.`
-      : '';
-
-  return renderTemplate(template, {
+  return mermaidFixUserTemplate.format({
     chartType,
-    contextSection,
     chart,
     error,
-    planDescription: planDescription || 'Not provided',
-    description: description || 'Not provided',
-    previousAttemptsContext,
+    hasPlanDescription,
   });
 }
 
-/**
- * Creates the planner system prompt
- */
-export async function createPlannerPrompt(): Promise<string> {
-  const template = await loadPromptTemplate('planner');
-
-  return renderTemplate(template, {
+export function createPlannerSystemPrompt(): string {
+  return plannerSystemTemplate.format({
     supportedChartTypes: Object.values(ChartType),
   });
 }
 
-/**
- * Clears the prompt cache (useful for development/testing)
- */
-export function clearPromptCache(): void {
-  promptCache.clear();
+export function createPlannerUserPrompt(): string {
+  return plannerUserTemplate.format({});
 }
