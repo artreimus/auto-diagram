@@ -1,40 +1,76 @@
 import { z } from 'zod';
+import { nanoid } from 'nanoid';
 import { planSchema } from '@/app/api/planner/schema';
 import { ChartSource } from '@/app/enum/session';
 
-export const chartsMetadata = z.object({
-  chart: z.string(), // the mermaid code of the chart
-  rationale: z.string(), // the rationale of the LLM that generated the chart
-  version: z.number(), // 1 = original, 2+ = fixes
-  source: z.nativeEnum(ChartSource), // How this version was created
-  error: z.string().optional(), // Error that prompted this version (for fixes)
+/**
+ * Shared primitives
+ */
+const idSchema = z
+  .string()
+  .nanoid()
+  .default(() => nanoid());
+const isoDateTime = z.string().datetime({ offset: true });
+
+/**
+ * A single version (iteration) of a chart
+ */
+export const chartVersionSchema = z.object({
+  chart: z.string(),
+  rationale: z.string(),
+  version: z.number().int().gte(1), // 1 = original, 2+ = fixes
+  source: z.nativeEnum(ChartSource),
+  error: z.string().optional(),
 });
 
-// Chart version represents each iteration (original + fixes)
-export const chartSchema = z.object({
-  metadata: z.array(chartsMetadata).default([]),
-  currentVersion: z.number().default(0), // Which version is currently active
-  plan: planSchema,
-  id: z.string().nanoid(),
+/**
+ * Chart version data without the version number (for creating new versions)
+ */
+export const chartVersionDataSchema = chartVersionSchema.omit({
+  version: true,
 });
 
-// Chart data with full version history
+/**
+ * Full chart history with multiple versions
+ */
+export const chartSchema = z
+  .object({
+    id: idSchema,
+    versions: z.array(chartVersionSchema).default([]),
+    currentVersion: z.number().default(0), // which version is active
+    plan: planSchema,
+  })
+  .refine((c) => c.currentVersion < c.versions.length, {
+    message: 'currentVersion must reference an existing version',
+    path: ['currentVersion'],
+  });
+
+/**
+ * A result corresponds to one user prompt and its charts
+ */
 export const resultSchema = z.object({
-  id: z.string().nanoid(), // Unique chart ID within session
-  prompt: z.string(), // the user prompt that generated the chart
-  charts: z.array(chartSchema).default([]), // All versions (original + fixes)
-  createdAt: z.string().datetime(), // ISO timestamp string
-  updatedAt: z.string().datetime(), // ISO timestamp string
+  id: idSchema, // unique per result within a session
+  prompt: z.string(),
+  charts: z.array(chartSchema).default([]),
+  createdAt: isoDateTime,
+  updatedAt: isoDateTime,
 });
 
-// Main session schema - core features only
+/**
+ * A session groups many results together
+ */
 export const sessionSchema = z.object({
-  id: z.string().nanoid(),
-  results: z.array(resultSchema).default([]), // all the results of the session
-  createdAt: z.string().datetime(), // ISO timestamp string
-  updatedAt: z.string().datetime(), // ISO timestamp string
+  id: idSchema,
+  results: z.array(resultSchema).default([]),
+  createdAt: isoDateTime,
+  updatedAt: isoDateTime,
 });
 
+/**
+ * Inferred TypeScript helpers
+ */
+export type ChartVersion = z.infer<typeof chartVersionSchema>;
+export type ChartVersionData = z.infer<typeof chartVersionDataSchema>;
 export type Chart = z.infer<typeof chartSchema>;
 export type Result = z.infer<typeof resultSchema>;
 export type Session = z.infer<typeof sessionSchema>;

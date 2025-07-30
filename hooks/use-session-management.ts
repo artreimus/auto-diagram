@@ -2,8 +2,15 @@
 
 import { useCallback, useState } from 'react';
 import { nanoid } from 'nanoid';
-import { Session, sessionSchema, Chart, Result } from '@/lib/session-schema';
-import { ChartSource, ResultStatus } from '@/app/enum/session';
+import {
+  Session,
+  sessionSchema,
+  Chart,
+  ChartVersion,
+  ChartVersionData,
+  Result,
+} from '@/app/validators/session';
+import { ChartSource } from '@/app/enum/session';
 
 const SESSIONS_STORAGE_KEY = 'sessions';
 
@@ -28,24 +35,13 @@ const saveSessionsToStorage = (sessions: Session[]): void => {
   }
 };
 
-// Helper functions for session finding
+// Helper function for session finding
 const findSessionById = (sessions: Session[], sessionId: string): Session => {
   const session = sessions.find((s) => s.id === sessionId);
   if (!session) {
     throw new Error('Session not found');
   }
   return session;
-};
-
-const findSessionIndexById = (
-  sessions: Session[],
-  sessionId: string
-): number => {
-  const index = sessions.findIndex((s) => s.id === sessionId);
-  if (index === -1) {
-    throw new Error('Session not found');
-  }
-  return index;
 };
 
 interface SessionHookReturn {
@@ -66,24 +62,13 @@ interface SessionHookReturn {
   addChartToResult: (
     sessionId: string,
     resultId: string,
-    chartData: {
-      chart: string;
-      rationale: string;
-      source: ChartSource;
-      error?: string;
-      plan: Chart['plan'];
-    }
+    newChart: Chart
   ) => Promise<void>;
   addChartVersion: (
     sessionId: string,
     resultId: string,
-    chartIndex: number,
-    chartData: {
-      chart: string;
-      rationale: string;
-      source: ChartSource;
-      error?: string;
-    }
+    chartId: string,
+    chartData: ChartVersionData
   ) => Promise<void>;
 
   // Loading and browsing
@@ -104,7 +89,6 @@ export function useSessionManagement(): SessionHookReturn {
   // Create new session
   const createSession = useCallback(async (): Promise<string> => {
     setIsLoading(true);
-    setError(null);
 
     try {
       const sessionId = nanoid();
@@ -143,12 +127,18 @@ export function useSessionManagement(): SessionHookReturn {
   const syncSession = useCallback(
     async (sessionId: string, updates: Partial<Session>): Promise<void> => {
       setIsLoading(true);
-      setError(null);
 
       try {
         // Get all sessions from consolidated storage
         const existingSessions = getSessionsFromStorage();
-        const sessionIndex = findSessionIndexById(existingSessions, sessionId);
+        const sessionIndex = existingSessions.findIndex(
+          (s) => s.id === sessionId
+        );
+
+        if (sessionIndex === -1) {
+          throw new Error('Session not found');
+        }
+
         const currentSession = existingSessions[sessionIndex];
         const now = new Date().toISOString();
 
@@ -191,7 +181,6 @@ export function useSessionManagement(): SessionHookReturn {
       }
     ): Promise<string> => {
       setIsLoading(true);
-      setError(null);
 
       try {
         // Get all sessions from consolidated storage
@@ -201,21 +190,18 @@ export function useSessionManagement(): SessionHookReturn {
         const resultId = nanoid();
         const now = new Date().toISOString();
 
+        const newVersion: ChartVersion = {
+          version: 1,
+          chart: chartData.chart,
+          rationale: chartData.rationale,
+          source: chartData.source,
+          error: chartData.error,
+        };
+
         const newChart: Chart = {
-          metadata: [
-            {
-              version: 1,
-              chart: chartData.chart,
-              rationale: chartData.rationale,
-              createdAt: now,
-              source: chartData.source,
-              error: chartData.error,
-              status: chartData.error
-                ? ResultStatus.ERROR
-                : ResultStatus.COMPLETED,
-            },
-          ],
-          currentVersion: 1,
+          id: nanoid(),
+          versions: [newVersion],
+          currentVersion: 0,
           plan: chartData.plan,
         };
 
@@ -252,16 +238,9 @@ export function useSessionManagement(): SessionHookReturn {
     async (
       sessionId: string,
       resultId: string,
-      chartData: {
-        chart: string;
-        rationale: string;
-        source: ChartSource;
-        error?: string;
-        plan: Chart['plan'];
-      }
+      newChart: Chart
     ): Promise<void> => {
       setIsLoading(true);
-      setError(null);
 
       try {
         // Get all sessions from consolidated storage
@@ -271,28 +250,11 @@ export function useSessionManagement(): SessionHookReturn {
         const resultIndex = session.results.findIndex(
           (result) => result.id === resultId
         );
+
         if (resultIndex === -1) throw new Error('Result not found');
 
         const result = session.results[resultIndex];
         const now = new Date().toISOString();
-
-        const newChart: Chart = {
-          metadata: [
-            {
-              version: 1,
-              chart: chartData.chart,
-              rationale: chartData.rationale,
-              createdAt: now,
-              source: chartData.source,
-              error: chartData.error,
-              status: chartData.error
-                ? ResultStatus.ERROR
-                : ResultStatus.COMPLETED,
-            },
-          ],
-          currentVersion: 1,
-          plan: chartData.plan,
-        };
 
         // Update result with new chart
         const updatedResult: Result = {
@@ -320,18 +282,12 @@ export function useSessionManagement(): SessionHookReturn {
     [syncSession]
   );
 
-  // Add new chart version (for fixes)
   const addChartVersion = useCallback(
     async (
       sessionId: string,
       resultId: string,
-      chartIndex: number,
-      chartData: {
-        chart: string;
-        rationale: string;
-        source: ChartSource;
-        error?: string;
-      }
+      chartId: string,
+      chartData: ChartVersionData
     ): Promise<void> => {
       setIsLoading(true);
 
@@ -346,29 +302,29 @@ export function useSessionManagement(): SessionHookReturn {
         if (resultIndex === -1) throw new Error('Result not found');
 
         const result = session.results[resultIndex];
-        if (chartIndex >= result.charts.length)
-          throw new Error('Chart not found');
+        const chartIndex = result.charts.findIndex(
+          (chart) => chart.id === chartId
+        );
+        if (chartIndex === -1) throw new Error('Chart not found');
 
         const chart = result.charts[chartIndex];
         const newVersionNumber =
-          Math.max(...chart.metadata.map((m) => m.version)) + 1;
+          Math.max(...chart.versions.map((v) => v.version)) + 1;
         const now = new Date().toISOString();
 
-        const newMetadata = {
-          version: newVersionNumber,
+        const newVersion: ChartVersion = {
           chart: chartData.chart,
           rationale: chartData.rationale,
-          createdAt: now,
+          version: newVersionNumber,
           source: chartData.source,
           error: chartData.error,
-          status: chartData.error ? ResultStatus.ERROR : ResultStatus.COMPLETED,
         };
 
         // Update chart with new version
         const updatedChart: Chart = {
           ...chart,
-          metadata: [...chart.metadata, newMetadata],
-          currentVersion: newVersionNumber,
+          versions: [...chart.versions, newVersion],
+          currentVersion: chart.versions.length,
         };
 
         // Update result
@@ -404,7 +360,6 @@ export function useSessionManagement(): SessionHookReturn {
   const loadSession = useCallback(
     async (sessionId: string): Promise<Session | null> => {
       setIsLoading(true);
-      setError(null);
 
       try {
         // Get all sessions from consolidated storage
