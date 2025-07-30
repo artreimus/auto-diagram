@@ -9,12 +9,9 @@ import { AIProvider } from '@/app/enum/ai';
  * Supports 'google' for Google Gemini models and 'openrouter' for OpenRouter models.
  * Model names are configurable via environment variables.
  */
-export function createAIModel(
-  modelType: 'fast' | 'reasoning',
-  provider: AIProvider
-) {
+export function createAIModel(modelType: 'fast' | 'reasoning') {
   // Use the AI_PROVIDER environment variable to determine which provider to use
-  if (provider === AIProvider.GOOGLE) {
+  if (env.AI_PROVIDER === AIProvider.GOOGLE) {
     // Return appropriate Google model from environment variables
     const modelName =
       modelType === 'fast' ? env.GOOGLE_FAST_MODEL : env.GOOGLE_REASONING_MODEL;
