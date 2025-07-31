@@ -1,5 +1,5 @@
 import { PromptTemplate } from './prompt-template';
-import { ChartType } from '@/app/enum/chart-types';
+import { ChartType } from '../app/enum/chart-types';
 
 // Mermaid Best Practices
 export const mermaidBestPractices = `# Mermaid Syntax That Renders Reliably in React (with \`mermaid\` npm)
@@ -38,8 +38,8 @@ export const mermaidBestPractices = `# Mermaid Syntax That Renders Reliably in R
 
 Always ensure your Mermaid syntax is correct and follows the official Mermaid documentation. Use proper escaping for newlines (\\n) in the chart field.`;
 
-// Mermaid Generation System Prompt
-export const mermaidGenerationSystemTemplate = PromptTemplate.create`# Mermaid Generation System Prompt
+// Mermaid Generation System Prompt (static)
+const mermaidGenerationSystemBase = `# Mermaid Generation System Prompt
 
 You are an expert at creating Mermaid diagrams. You are a generator agent that creates a Mermaid chart based on the user's request.
 
@@ -86,9 +86,7 @@ For state:
 "chart": "stateDiagram-v2\\n [*] --> LoggedOut\\n LoggedOut --> LoggingIn : login()\\n LoggingIn --> LoggedIn : success\\n LoggingIn --> LoggedOut : failure\\n LoggedIn --> LoggedOut : logout()\\n LoggedIn --> [*]"
 }
 
-Always ensure your Mermaid syntax is correct and follows the official Mermaid documentation. Use proper escaping for newlines (\\n) in the chart field.
-
-${mermaidBestPractices}`;
+Always ensure your Mermaid syntax is correct and follows the official Mermaid documentation. Use proper escaping for newlines (\\n) in the chart field.`;
 
 // Mermaid Generation User Prompt
 export const mermaidGenerationUserTemplate = PromptTemplate.create<{
@@ -108,8 +106,8 @@ ${'hasInstructions'}
 
 Create the Mermaid diagram now.`;
 
-// Mermaid Fix System Prompt
-export const mermaidFixSystemTemplate = PromptTemplate.create`You are an expert at debugging and fixing Mermaid diagram syntax errors. Your job is to fix ONLY the syntax errors and return a corrected Mermaid chart.
+// Mermaid Fix System Prompt (static)
+const mermaidFixSystemBase = `You are an expert at debugging and fixing Mermaid diagram syntax errors. Your job is to fix ONLY the syntax errors and return a corrected Mermaid chart.
 
 ## CRITICAL RULES FOR SYNTAX FIXING:
 
@@ -142,9 +140,7 @@ You must respond with a JSON object containing exactly four fields:
 - Invalid sequence diagram participant names
 - Incorrect Gantt chart date formats
 
-**Remember:** This is SYNTAX REPAIR ONLY. Fix the code to render properly while preserving ALL original content and intent.
-
-${mermaidBestPractices}`;
+**Remember:** This is SYNTAX REPAIR ONLY. Fix the code to render properly while preserving ALL original content and intent.`;
 
 // Mermaid Fix User Prompt
 export const mermaidFixUserTemplate = PromptTemplate.create<{
@@ -214,7 +210,7 @@ Plan comprehensive diagrams that fully address the user's requirements. Each cha
 
 // Export functions to create prompts
 export function createMermaidGenerationSystemPrompt(): string {
-  return mermaidGenerationSystemTemplate.format({});
+  return `${mermaidGenerationSystemBase}\n\n${mermaidBestPractices}`;
 }
 
 export function createMermaidGenerationUserPrompt(
@@ -249,7 +245,7 @@ Your chart must directly address the original user's question while specifically
 }
 
 export function createMermaidFixSystemPrompt(): string {
-  return mermaidFixSystemTemplate.format({});
+  return `${mermaidFixSystemBase}\n\n${mermaidBestPractices}`;
 }
 
 export function createMermaidFixUserPrompt(
@@ -279,6 +275,10 @@ export function createPlannerSystemPrompt(): string {
   });
 }
 
-export function createPlannerUserPrompt(): string {
-  return plannerUserTemplate.format({});
-}
+// Export templates for testing
+export const mermaidGenerationSystemTemplate = {
+  format: () => mermaidGenerationSystemBase,
+};
+export const mermaidFixSystemTemplate = {
+  format: () => mermaidFixSystemBase,
+};
