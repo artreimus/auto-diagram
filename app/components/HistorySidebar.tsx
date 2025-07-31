@@ -15,7 +15,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { Session } from '@/lib/session-schema';
+import { Session } from '@/app/validators/session';
 import { AutoDiagramLogo } from './AutoDiagramLogo';
 import { useRouter } from 'next/navigation';
 
@@ -66,9 +66,9 @@ export function HistorySidebar({
   };
 
   return (
-    <Sidebar 
-      side='left' 
-      variant='sidebar' 
+    <Sidebar
+      side='left'
+      variant='sidebar'
       className='bg-monochrome-charcoal border-r border-monochrome-pewter/20 [&_[data-mobile="true"]]:!bg-monochrome-charcoal'
     >
       <SidebarHeader className='border-b border-monochrome-pewter/20'>
