@@ -8,7 +8,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { HistorySidebar } from './components/HistorySidebar';
-import { Session } from '@/lib/session-schema';
+import { Session } from '@/app/validators/session';
 import { useSessionManagement } from '@/hooks/use-session-management';
 
 interface ClientLayoutProps {
