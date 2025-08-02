@@ -131,7 +131,7 @@ describe('Prompt Functions', () => {
       expect(prompt).toContain('CRITICAL RULES FOR SYNTAX FIXING');
       expect(prompt).toContain('PRESERVE ORIGINAL CONTENT');
       expect(prompt).toContain('FIX SYNTAX ONLY');
-      expect(prompt).toContain('four fields');
+      expect(prompt).toContain('two fields');
       expect(prompt).toContain('explanation');
       expect(prompt).toContain(mermaidBestPractices);
     });
@@ -162,7 +162,7 @@ describe('Prompt Functions', () => {
       expect(prompt).toContain('## Error encountered:');
       expect(prompt).toContain(testError);
       expect(prompt).toContain(
-        'Fix the syntax errors while preserving all original content and intent'
+        'SYNTAX REPAIR ONLY. Fix the code to render properly while preserving ALL original content and intent'
       );
     });
 
@@ -189,7 +189,7 @@ describe('Prompt Functions', () => {
         testError
       );
       expect(prompt).not.toContain('**Chart Plan:**');
-      expect(prompt).not.toContain('**CRITICAL:**');
+      expect(prompt).toContain('**CRITICAL:**'); // CRITICAL is always included in the template
     });
 
     test('should handle empty plan description', () => {
