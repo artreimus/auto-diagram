@@ -137,7 +137,6 @@ export default function HomePage() {
             chart: fixedChart,
             rationale,
             source: ChartSource.FIX,
-            error: undefined,
             status: ResultStatus.COMPLETED,
           });
           // The hook will automatically update currentSession via syncSession

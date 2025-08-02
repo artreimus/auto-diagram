@@ -20,7 +20,6 @@ export const chartVersionSchema = z.object({
   rationale: z.string(),
   version: z.number().int().gte(1), // 1 = original, 2+ = fixes
   source: z.nativeEnum(ChartSource),
-  error: z.string().optional(),
   status: z.nativeEnum(ResultStatus).default(ResultStatus.COMPLETED),
 });
 
