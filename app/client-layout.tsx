@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import {
   SidebarProvider,
@@ -8,7 +7,6 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { HistorySidebar } from './components/HistorySidebar';
-import { Session } from '@/app/validators/session';
 import { useSessionManagement } from '@/hooks/use-session-management';
 
 interface ClientLayoutProps {
@@ -17,35 +15,18 @@ interface ClientLayoutProps {
 
 export function ClientLayout({ children }: ClientLayoutProps) {
   const pathname = usePathname();
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const { getAllSessions } = useSessionManagement();
+  const { allSessions } = useSessionManagement();
 
   // Get current session ID from pathname
   const currentSessionId = pathname.startsWith('/session/')
     ? pathname.split('/')[2]
     : null;
 
-  // Load sessions from new format only
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const loadSessions = async () => {
-        try {
-          const allSessions = await getAllSessions();
-          setSessions(allSessions);
-        } catch (error) {
-          console.error('Failed to load sessions:', error);
-        }
-      };
-
-      loadSessions();
-    }
-  }, [getAllSessions]);
-
   return (
     <SidebarProvider>
       <div className='flex min-h-screen w-full bg-monochrome-pure-black text-monochrome-pure-white antialiased'>
         <HistorySidebar
-          sessions={sessions}
+          sessions={allSessions}
           selectedSessionId={currentSessionId}
         />
 
@@ -57,7 +38,7 @@ export function ClientLayout({ children }: ClientLayoutProps) {
               <div className='flex-1'>
                 <p className='text-sm text-monochrome-silver'>
                   {(() => {
-                    const session = sessions.find(
+                    const session = allSessions.find(
                       (s) => s.id === currentSessionId
                     );
                     if (session) {
