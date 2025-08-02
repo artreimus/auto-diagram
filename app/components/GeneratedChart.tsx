@@ -1,75 +1,78 @@
 'use client';
 
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { experimental_useObject as useObject } from '@ai-sdk/react';
 import ReactMarkdown from 'react-markdown';
 import MermaidDiagram from './MermaidDiagram';
-import { ChartPlan } from '@/app/api/planner/schema';
-import { mermaidSchema } from '@/app/api/mermaid/schema';
-import { ResultStatus } from '../enum/session';
+import { MermaidChart, mermaidSchema } from '@/app/api/mermaid/schema';
+import { Plan } from '../api/planner/schema';
 
-// Enhanced props with AI SDK pattern context
 interface GeneratedChartProps {
-  chartStatus: {
-    plan: ChartPlan;
-    status: ResultStatus;
-    chart?: string;
-    isGenerating: boolean;
-    isFixing: boolean;
-    error?: Error | null;
-    retryCount: number;
-    mermaidResult?: unknown;
-    fixResult?: unknown;
-    canFix: boolean;
-    fixError?: string;
-  };
-  planId: number;
-  onRenderError: (planId: number, error: string) => void;
-  onFixComplete?: () => void;
-  originalUserMessage: string;
+  id?: string;
+  plan: Plan;
+  chart: MermaidChart;
+  isPlanning?: boolean;
+  isGenerating?: boolean;
+  onFixComplete: (
+    chartIndex: number,
+    fixedChart: string,
+    rationale: string
+  ) => void;
 }
 
 export function GeneratedChart({
-  chartStatus,
-  planId,
-  onRenderError,
+  id,
+  plan,
+  chart,
+  isPlanning = false,
+  isGenerating = false,
   onFixComplete,
-  originalUserMessage,
 }: GeneratedChartProps) {
-  const {
-    plan,
-    status,
-    chart,
-    isGenerating,
-    error,
-    retryCount,
-    canFix,
-    mermaidResult,
-  } = chartStatus;
+  // All hooks must be called before any early returns
+  const [isFixing, setIsFixing] = useState(false);
+
+  // Use the passed chart data directly
+  const chartContent = chart.chart || '';
 
   // Pattern 3: Individual fix hook per chart component
   const fixHook = useObject({
     api: '/api/mermaid/fix',
     schema: mermaidSchema,
-    onFinish: () => {
-      if (onFixComplete) {
-        onFixComplete();
+    onFinish: async (result) => {
+      setIsFixing(false);
+
+      if (result.object) {
+        try {
+          // Update parent component state to stay in sync
+          if (onFixComplete) {
+            onFixComplete(
+              0, // chartIndex not available, using 0 as fallback // TODO: Utilize id instead
+              result.object.chart,
+              result.object.description || 'Fixed chart'
+            );
+          }
+        } catch (error) {
+          console.error('Failed to process fix result:', error);
+        }
       }
+    },
+    onError: (error) => {
+      setIsFixing(false);
+      console.error('Fix error:', error.message);
     },
   });
 
   // Handle manual fix trigger
-  const handleManualFix = () => {
-    const result = mermaidResult as
-      | { error?: string; chart?: { chart?: string } }
-      | undefined;
-    if (result?.error && !fixHook.isLoading) {
+  const handleManualFix = (errorMessage?: string) => {
+    if (errorMessage && !isFixing && plan) {
+      setIsFixing(true);
+
       fixHook.submit({
-        chart: result.chart?.chart || '',
-        error: result.error,
+        chart: chartContent || '',
+        error: errorMessage,
         chartType: plan.type,
-        description: plan.description,
-        originalUserMessage: originalUserMessage,
+        description: chart.description || plan.description,
         planDescription: plan.description,
         previousAttempts: [],
       });
@@ -77,9 +80,7 @@ export function GeneratedChart({
   };
 
   // Use fix result if available, otherwise use original chart
-  const displayChart = fixHook.object?.chart || chart;
-  const isFixing = fixHook.isLoading;
-  const currentFixError = fixHook.error?.message;
+  const displayChart = fixHook.object?.chart || chartContent;
 
   return (
     <motion.div
@@ -96,7 +97,7 @@ export function GeneratedChart({
           transition={{ duration: 0.4, delay: 0.1 }}
           className='text-xl font-light tracking-tight text-monochrome-pure-white capitalize mb-3'
         >
-          {plan.type ?? 'Chart'} Visualization
+          {plan?.type ?? 'Chart'} Visualization
         </motion.h3>
 
         <motion.div
@@ -158,7 +159,7 @@ export function GeneratedChart({
               ),
             }}
           >
-            {plan.description || 'Preparing visualization...'}
+            {plan?.description || 'Preparing visualization...'}
           </ReactMarkdown>
         </motion.div>
       </div>
@@ -171,61 +172,12 @@ export function GeneratedChart({
           transition={{ duration: 0.6, ease: 'easeOut', delay: 0.3 }}
         >
           <MermaidDiagram
-            id={`chart-${planId}`}
+            id={id || 'chart'}
             chart={displayChart}
-            onRenderError={(error) => onRenderError(planId, error)}
+            description={plan?.description}
+            onFixClick={handleManualFix}
+            isFixing={isFixing}
           />
-        </motion.div>
-      ) : status === 'error' && canFix ? (
-        // Error state with manual fix button
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className='border border-monochrome-steel/30 bg-monochrome-charcoal/20 rounded-2xl p-6 backdrop-blur-sm'
-        >
-          <div className='flex items-start space-x-3 mb-4'>
-            <div className='w-1.5 h-1.5 bg-monochrome-ash rounded-full mt-2 flex-shrink-0' />
-            <div className='flex-1'>
-              <p className='text-monochrome-cloud font-medium mb-1'>
-                Chart generation failed
-              </p>
-              <p className='text-sm text-monochrome-silver font-light mb-4'>
-                {error?.message || 'Unknown error occurred during generation'}
-              </p>
-
-              {/* Manual Fix Button */}
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={handleManualFix}
-                disabled={isFixing}
-                className={`text-sm font-medium tracking-wide px-4 py-2 rounded-xl border transition-all duration-200 backdrop-blur-sm ${
-                  isFixing
-                    ? 'text-monochrome-ash border-monochrome-pewter/20 bg-monochrome-graphite/10 cursor-not-allowed'
-                    : 'text-monochrome-pure-white hover:text-monochrome-cloud border-monochrome-silver/40 hover:border-monochrome-cloud/60 bg-monochrome-graphite/30 hover:bg-monochrome-slate-dark/40'
-                }`}
-              >
-                {isFixing ? (
-                  <span className='flex items-center space-x-2'>
-                    <div className='w-3 h-3 border border-monochrome-ash border-t-transparent rounded-full animate-spin' />
-                    <span>Fixing...</span>
-                  </span>
-                ) : (
-                  `Try Fix${retryCount > 0 ? ` (Attempt ${retryCount + 1})` : ''}`
-                )}
-              </motion.button>
-
-              {/* Fix Error Display */}
-              {currentFixError && (
-                <div className='mt-4 p-3 bg-monochrome-graphite/20 rounded-xl'>
-                  <p className='text-xs text-monochrome-silver'>
-                    <span className='font-medium'>Fix failed:</span>{' '}
-                    {currentFixError}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
         </motion.div>
       ) : (
         // Loading state
@@ -264,11 +216,13 @@ export function GeneratedChart({
             transition={{ duration: 0.4, delay: 0.2 }}
             className='mt-6 text-monochrome-silver font-light tracking-wide text-sm'
           >
-            {isGenerating
-              ? 'Generating visualization'
-              : isFixing
-                ? 'Applying fix...'
-                : 'Waiting for generation...'}
+            {isPlanning
+              ? 'Planning visualization'
+              : isGenerating
+                ? 'Generating visualization'
+                : isFixing
+                  ? 'Applying fix...'
+                  : 'Waiting for generation...'}
           </motion.span>
         </motion.div>
       )}
