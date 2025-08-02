@@ -16,7 +16,6 @@ type MermaidProps = {
 const MermaidDiagram = ({
   id,
   chart,
-  description: planDescription,
   onFixClick,
   isFixing = false,
 }: MermaidProps) => {

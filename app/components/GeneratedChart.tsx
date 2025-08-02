@@ -7,6 +7,8 @@ import ReactMarkdown from 'react-markdown';
 import MermaidDiagram from './MermaidDiagram';
 import { MermaidChart, mermaidSchema } from '@/app/api/mermaid/schema';
 import { Plan } from '../api/planner/schema';
+import { ChartVersion } from '@/app/validators/session';
+import { ChartSource } from '@/app/enum/session';
 import {
   Accordion,
   AccordionContent,
@@ -18,28 +20,40 @@ interface GeneratedChartProps {
   id?: string;
   plan: Plan;
   chart: MermaidChart;
+  chartIndex: number;
   isPlanning?: boolean;
   isGenerating?: boolean;
+  versions?: ChartVersion[];
+  currentVersionIndex?: number;
   onFixComplete: (
     chartIndex: number,
     fixedChart: string,
     rationale: string
   ) => void;
+  onVersionChange?: (chartIndex: number, versionIndex: number) => void;
 }
 
 export function GeneratedChart({
   id,
   plan,
   chart,
+  chartIndex,
   isPlanning = false,
   isGenerating = false,
+  versions = [],
+  currentVersionIndex = 0,
   onFixComplete,
+  onVersionChange,
 }: GeneratedChartProps) {
   // All hooks must be called before any early returns
   const [isFixing, setIsFixing] = useState(false);
 
-  // Use the passed chart data directly
-  const chartContent = chart.chart || '';
+  // Determine which chart to display: from versions if available, otherwise from props
+  const currentVersion =
+    versions.length > 0 ? versions[currentVersionIndex] : null;
+  const chartContent = currentVersion?.chart || chart.chart || '';
+  const chartDescription =
+    currentVersion?.rationale || chart.description || plan.description;
 
   // Pattern 3: Individual fix hook per chart component
   const fixHook = useObject({
@@ -53,7 +67,7 @@ export function GeneratedChart({
           // Update parent component state to stay in sync
           if (onFixComplete) {
             onFixComplete(
-              0, // chartIndex not available, using 0 as fallback // TODO: Utilize id instead
+              chartIndex,
               result.object.chart,
               result.object.description || 'Fixed chart'
             );
@@ -78,7 +92,7 @@ export function GeneratedChart({
         chart: chartContent || '',
         error: errorMessage,
         chartType: plan.type,
-        description: chart.description || plan.description,
+        description: chartDescription,
         planDescription: plan.description,
         previousAttempts: [],
       });
@@ -191,6 +205,53 @@ export function GeneratedChart({
           </Accordion>
         </motion.div>
       </div>
+
+      {/* Version selection */}
+      {versions.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4, delay: 0.3 }}
+          className='mb-6'
+        >
+          <div className='flex items-center gap-2 text-sm text-monochrome-silver'>
+            <span className='font-light'>
+              {versions.length > 1 ? 'Versions:' : 'Version:'}
+            </span>
+            <div className='flex gap-1'>
+              {versions.map((version, index) => (
+                <motion.button
+                  key={version.version}
+                  whileHover={versions.length > 1 ? { scale: 1.05 } : {}}
+                  whileTap={versions.length > 1 ? { scale: 0.95 } : {}}
+                  onClick={() =>
+                    versions.length > 1 && onVersionChange?.(chartIndex, index)
+                  }
+                  disabled={versions.length === 1}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                    index === currentVersionIndex
+                      ? 'bg-monochrome-pure-white text-monochrome-pure-black'
+                      : versions.length > 1
+                        ? 'bg-monochrome-charcoal/20 text-monochrome-silver hover:bg-monochrome-graphite/30 hover:text-monochrome-cloud cursor-pointer'
+                        : 'bg-monochrome-charcoal/20 text-monochrome-silver cursor-default'
+                  }`}
+                  title={`${version.source === ChartSource.GENERATION ? 'Generated' : 'Fixed'} - ${version.rationale}`}
+                >
+                  v{version.version}
+                  {version.source === ChartSource.FIX && (
+                    <span className='ml-1 text-green-400'>✓</span>
+                  )}
+                </motion.button>
+              ))}
+              {versions.length > 1 && (
+                <span className='text-xs text-monochrome-ash ml-2 self-center'>
+                  ({versions.length} versions)
+                </span>
+              )}
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Chart content with manual fix controls */}
       {displayChart ? (

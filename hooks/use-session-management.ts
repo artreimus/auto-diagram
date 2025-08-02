@@ -10,7 +10,7 @@ import {
   ChartVersionData,
   Result,
 } from '@/app/validators/session';
-import { ChartSource } from '@/app/enum/session';
+import { ChartSource, ResultStatus } from '@/app/enum/session';
 
 const SESSIONS_STORAGE_KEY = 'sessions';
 
@@ -243,6 +243,7 @@ export function useSessionManagement(): SessionHookReturn {
           rationale: chartData.rationale,
           source: chartData.source,
           error: chartData.error,
+          status: ResultStatus.COMPLETED,
         };
 
         const newChart: Chart = {
@@ -365,6 +366,7 @@ export function useSessionManagement(): SessionHookReturn {
           version: newVersionNumber,
           source: chartData.source,
           error: chartData.error,
+          status: ResultStatus.COMPLETED,
         };
 
         // Update chart with new version
