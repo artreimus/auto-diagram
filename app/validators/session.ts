@@ -67,10 +67,21 @@ export const sessionSchema = z.object({
 });
 
 /**
+ * Chart data for initial creation (without versions array populated)
+ */
+export const chartCreationSchema = z.object({
+  id: idSchema,
+  versions: z.array(chartVersionSchema).default([]),
+  currentVersion: z.number().default(0),
+  plan: planSchema,
+});
+
+/**
  * Inferred TypeScript helpers
  */
 export type ChartVersion = z.infer<typeof chartVersionSchema>;
 export type ChartVersionData = z.infer<typeof chartVersionDataSchema>;
 export type Chart = z.infer<typeof chartSchema>;
+export type ChartCreation = z.infer<typeof chartCreationSchema>;
 export type Result = z.infer<typeof resultSchema>;
 export type Session = z.infer<typeof sessionSchema>;

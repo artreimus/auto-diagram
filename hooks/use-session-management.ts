@@ -48,6 +48,7 @@ interface SessionHookReturn {
   // Core session management
   createSession: () => Promise<string>;
   syncSession: (sessionId: string, updates: Partial<Session>) => Promise<void>;
+  createEmptyResult: (sessionId: string, prompt: string) => Promise<string>;
   addResult: (
     sessionId: string,
     prompt: string,
@@ -165,6 +166,47 @@ export function useSessionManagement(): SessionHookReturn {
       }
     },
     []
+  );
+
+  // Create empty result with just prompt and empty charts array
+  const createEmptyResult = useCallback(
+    async (sessionId: string, prompt: string): Promise<string> => {
+      setIsLoading(true);
+
+      try {
+        // Get all sessions from consolidated storage
+        const existingSessions = getSessionsFromStorage();
+        const session = findSessionById(existingSessions, sessionId);
+
+        const resultId = nanoid();
+        const now = new Date().toISOString();
+
+        const newResult: Result = {
+          id: resultId,
+          prompt,
+          charts: [],
+          createdAt: now,
+          updatedAt: now,
+        };
+
+        // Update session with new result
+        const updatedResults = [...session.results, newResult];
+
+        await syncSession(sessionId, {
+          results: updatedResults,
+        });
+
+        return resultId;
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to create empty result';
+        setError(errorMessage);
+        throw new Error(errorMessage);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [syncSession]
   );
 
   // Add a new result to session
@@ -420,6 +462,7 @@ export function useSessionManagement(): SessionHookReturn {
   return {
     createSession,
     syncSession,
+    createEmptyResult,
     addResult,
     addChartToResult,
     addChartVersion,
