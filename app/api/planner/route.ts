@@ -13,7 +13,6 @@ export async function POST(req: Request) {
     model: createAIModel('reasoning'),
     system: systemPrompt,
     messages,
-    output: 'array',
   });
 
   return result.toTextStreamResponse();
