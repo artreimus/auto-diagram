@@ -167,7 +167,7 @@ const MermaidDiagram = ({
 
       const serializer = new XMLSerializer();
       const svgString = serializer.serializeToString(clonedSvg);
-      const svgDataUrl = `data:image/svg+xml;base64,${btoa(encodeURIComponent(svgString))}`;
+      const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgString)}`;
 
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
