@@ -98,8 +98,8 @@ export function GeneratedChart({
     }
   };
 
-  // Use fix result if available, otherwise use original chart
-  const displayChart = fixHook.object?.chart || chartContent;
+  // Always use the current version chart from session data
+  const displayChart = chartContent;
 
   return (
     <motion.div
@@ -260,6 +260,7 @@ export function GeneratedChart({
           transition={{ duration: 0.6, ease: 'easeOut', delay: 0.3 }}
         >
           <MermaidDiagram
+            key={`${id}-${currentVersionIndex}`}
             id={id || 'chart'}
             chart={displayChart}
             description={plan?.description}

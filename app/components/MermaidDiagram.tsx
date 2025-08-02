@@ -24,8 +24,11 @@ const MermaidDiagram = ({
   const [showSyntax, setShowSyntax] = useState(false);
   const [renderError, setRenderError] = useState<string | null>(null);
 
-  // Ensure the ID is a valid CSS selector
-  const validId = `mermaid-${id.replace(/[^a-zA-Z0-9-_]/g, '').replace(/^[0-9]/, 'n$&')}`;
+  // Ensure the ID is a valid CSS selector and include chart hash to force re-render on content change
+  const chartHash = chart
+    ? chart.length.toString() + chart.slice(0, 10).replace(/[^a-zA-Z0-9]/g, '')
+    : '';
+  const validId = `mermaid-${id.replace(/[^a-zA-Z0-9-_]/g, '').replace(/^[0-9]/, 'n$&')}-${chartHash}`;
 
   useEffect(() => {
     // Initialize Mermaid with our sophisticated monochrome theme
@@ -232,6 +235,9 @@ const MermaidDiagram = ({
     let isStale = false;
     containerRef.current.innerHTML = '';
 
+    // Clear any previous render error when starting a new render
+    setRenderError(null);
+
     mermaid
       .render(validId, chart)
       .then(({ svg, bindFunctions }) => {
@@ -255,7 +261,7 @@ const MermaidDiagram = ({
     return () => {
       isStale = true;
     };
-  }, [validId, chart]);
+  }, [validId, chart, id]);
 
   return (
     <div className='space-y-6'>
