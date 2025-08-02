@@ -4,6 +4,7 @@ import { useState, useCallback, useRef } from 'react';
 import { experimental_useObject as useObject } from '@ai-sdk/react';
 import { motion } from 'framer-motion';
 import { nanoid } from 'nanoid';
+import { useRouter } from 'next/navigation';
 
 import { plansSchema, Plan } from '@/app/api/planner/schema';
 import { batchMermaidResponseSchema } from '@/app/api/mermaid/schema';
@@ -70,6 +71,7 @@ const parseChartCommands = (prompt: string) => {
 export default function HomePage() {
   const [prompt, setPrompt] = useState('');
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const router = useRouter();
 
   // Use refs to store current sessionId and plannedCharts for onFinish callbacks
   const sessionIdRef = useRef<string | null>(null);
@@ -164,6 +166,11 @@ export default function HomePage() {
           }
         } catch (error) {
           console.error('Failed to update result with chart data:', error);
+        }
+
+        // Redirect to session page after successful generation
+        if (currentSessionId) {
+          router.push(`/session/${currentSessionId}`);
         }
       }
     },
