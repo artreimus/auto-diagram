@@ -324,11 +324,14 @@ export default function HomePage() {
                         type: plan.type,
                         description: plan.description,
                         chart:
+                          batchMermaidHook.object?.results?.[index]?.chart
+                            ?.chart ||
                           currentSession?.results?.[0]?.charts?.[index]
                             ?.versions?.[
                             currentSession.results[0].charts[index]
                               .currentVersion
-                          ]?.chart || '',
+                          ]?.chart ||
+                          '',
                       }}
                       onFixComplete={handleFixComplete}
                       isPlanning={plannerHook.isLoading}
