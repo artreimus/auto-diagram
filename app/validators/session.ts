@@ -40,10 +40,13 @@ export const chartSchema = z
     currentVersion: z.number().default(0), // which version is active
     plan: planSchema,
   })
-  .refine((c) => c.currentVersion < c.versions.length, {
-    message: 'currentVersion must reference an existing version',
-    path: ['currentVersion'],
-  });
+  .refine(
+    (c) => c.versions.length === 0 || c.currentVersion < c.versions.length,
+    {
+      message: 'currentVersion must reference an existing version',
+      path: ['currentVersion'],
+    }
+  );
 
 /**
  * A result corresponds to one user prompt and its charts
