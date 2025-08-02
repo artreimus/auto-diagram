@@ -8,19 +8,22 @@ import mermaid from 'mermaid';
 type MermaidProps = {
   id: string;
   chart: string;
-  onRenderError: (errorMessage: string) => void;
-  planDescription?: string;
+  description?: string;
+  onFixClick?: (errorMessage?: string) => void;
+  isFixing?: boolean;
 };
 
 const MermaidDiagram = ({
   id,
   chart,
-  onRenderError,
-  planDescription,
+  description: planDescription,
+  onFixClick,
+  isFixing = false,
 }: MermaidProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [copySuccess, setCopySuccess] = useState(false);
   const [showSyntax, setShowSyntax] = useState(false);
+  const [renderError, setRenderError] = useState<string | null>(null);
 
   // Ensure the ID is a valid CSS selector
   const validId = `mermaid-${id.replace(/[^a-zA-Z0-9-_]/g, '').replace(/^[0-9]/, 'n$&')}`;
@@ -108,22 +111,6 @@ const MermaidDiagram = ({
       state: { useMaxWidth: true },
     });
   }, []);
-
-  // Fallback SVG download
-  const downloadSvgFallback = useCallback(
-    (svgString: string) => {
-      const blob = new Blob([svgString], { type: 'image/svg+xml' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `visualization-${id}.svg`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    },
-    [id]
-  );
 
   // Download chart as PNG with sophisticated styling
   const downloadChart = useCallback(() => {
@@ -214,22 +201,18 @@ const MermaidDiagram = ({
           );
         } catch (error) {
           console.error('Error rendering canvas:', error);
-          downloadSvgFallback(svgString);
         }
       };
 
       img.onerror = () => {
         console.error('Error loading SVG');
-        downloadSvgFallback(svgString);
       };
 
       img.src = svgDataUrl;
     } catch (error) {
       console.error('Error in downloadChart:', error);
-      const svgData = new XMLSerializer().serializeToString(svgElement);
-      downloadSvgFallback(svgData);
     }
-  }, [id, downloadSvgFallback]);
+  }, [id]);
 
   // Copy syntax with elegant feedback
   const copySyntax = useCallback(async () => {
@@ -258,22 +241,22 @@ const MermaidDiagram = ({
           if (bindFunctions) {
             bindFunctions(containerRef.current);
           }
+          setRenderError(null);
         }
       })
       .catch((error) => {
         if (isStale) {
           return;
         }
-
         const errorMessage =
           error?.message || String(error) || 'Chart rendering failed';
-        console.error('Error rendering visualization:', error);
-        onRenderError(errorMessage);
+        console.error('Mermaid render error:', error);
+        setRenderError(errorMessage);
       });
     return () => {
       isStale = true;
     };
-  }, [validId, chart, onRenderError]);
+  }, [validId, chart]);
 
   return (
     <div className='space-y-6'>
@@ -341,6 +324,52 @@ const MermaidDiagram = ({
             </ReactMarkdown>
           </div>
         </div>
+      )}
+
+      {/* Error state with fix button */}
+      {renderError && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className='border border-red-500/30 bg-red-500/5 rounded-2xl p-6 backdrop-blur-sm'
+        >
+          <div className='flex items-start space-x-3 mb-4'>
+            <div className='w-1.5 h-1.5 bg-red-500 rounded-full mt-2 flex-shrink-0' />
+            <div className='flex-1'>
+              <p className='text-monochrome-cloud font-medium mb-1'>
+                Chart rendering failed
+              </p>
+              <p className='text-sm text-monochrome-silver font-light mb-4'>
+                {renderError}
+              </p>
+
+              <div className='flex gap-3'>
+                {onFixClick && (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => onFixClick?.(renderError || undefined)}
+                    disabled={isFixing}
+                    className={`text-sm font-medium tracking-wide px-4 py-2 rounded-xl border transition-all duration-200 backdrop-blur-sm ${
+                      isFixing
+                        ? 'text-monochrome-ash border-monochrome-pewter/20 bg-monochrome-graphite/10 cursor-not-allowed'
+                        : 'text-monochrome-pure-white hover:text-monochrome-cloud border-monochrome-silver/40 hover:border-monochrome-cloud/60 bg-monochrome-graphite/30 hover:bg-monochrome-slate-dark/40'
+                    }`}
+                  >
+                    {isFixing ? (
+                      <span className='flex items-center space-x-2'>
+                        <div className='w-3 h-3 border border-monochrome-ash border-t-transparent rounded-full animate-spin' />
+                        <span>Fixing...</span>
+                      </span>
+                    ) : (
+                      'Fix Chart'
+                    )}
+                  </motion.button>
+                )}
+              </div>
+            </div>
+          </div>
+        </motion.div>
       )}
 
       {/* Refined action controls */}
@@ -476,25 +505,27 @@ const MermaidDiagram = ({
       </AnimatePresence>
 
       {/* Chart container with custom monochrome styling applied via CSS variables */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
-        ref={containerRef}
-        className='mermaid-container bg-monochrome-pure-white rounded-2xl p-8 border border-monochrome-pewter/20 shadow-soft overflow-auto'
-        style={
-          {
-            // Custom CSS variables for enhanced monochrome styling
-            '--mermaid-font-family':
-              'ui-sans-serif, -apple-system, BlinkMacSystemFont, SF Pro Text, SF Pro Display, Helvetica Neue, Arial, sans-serif',
-            '--mermaid-font-size': '14px',
-            '--mermaid-primary-color': '#ffffff',
-            '--mermaid-primary-text-color': '#1a1a1a',
-            '--mermaid-primary-border-color': '#2a2a2a',
-            '--mermaid-line-color': '#3a3a3a',
-          } as React.CSSProperties
-        }
-      />
+      {!renderError && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+          ref={containerRef}
+          className='mermaid-container bg-monochrome-pure-white rounded-2xl p-8 border border-monochrome-pewter/20 shadow-soft overflow-auto'
+          style={
+            {
+              // Custom CSS variables for enhanced monochrome styling
+              '--mermaid-font-family':
+                'ui-sans-serif, -apple-system, BlinkMacSystemFont, SF Pro Text, SF Pro Display, Helvetica Neue, Arial, sans-serif',
+              '--mermaid-font-size': '14px',
+              '--mermaid-primary-color': '#ffffff',
+              '--mermaid-primary-text-color': '#1a1a1a',
+              '--mermaid-primary-border-color': '#2a2a2a',
+              '--mermaid-line-color': '#3a3a3a',
+            } as React.CSSProperties
+          }
+        />
+      )}
     </div>
   );
 };

@@ -353,14 +353,20 @@ export default function HomePage() {
                 .map((plan, index) => (
                   <motion.div key={index} {...chartRevealAnimation(index)}>
                     <GeneratedChart
-                      sessionData={sessionData}
-                      chartIndex={index}
+                      id={`chart-${index}`}
+                      plan={plan}
+                      chart={{
+                        type: plan.type,
+                        description: plan.description,
+                        chart:
+                          sessionData?.results?.[0]?.charts?.[index]
+                            ?.versions?.[
+                            sessionData.results[0].charts[index].currentVersion
+                          ]?.chart || '',
+                      }}
                       onFixComplete={handleFixComplete}
-                      sessionId={sessionIdRef.current || undefined}
-                      resultId={resultIdRef.current || undefined}
                       isPlanning={plannerHook.isLoading}
                       isGenerating={batchMermaidHook.isLoading}
-                      planData={plan}
                     />
                   </motion.div>
                 ))}
