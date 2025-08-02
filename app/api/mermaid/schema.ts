@@ -52,3 +52,12 @@ export const mermaidFixRequestSchema = z.object({
 });
 
 export type MermaidFixRequest = z.infer<typeof mermaidFixRequestSchema>;
+
+export const mermaidFixResponseSchema = z.object({
+  chart: z.string().describe('The corrected Mermaid diagram code'),
+  explanation: z
+    .string()
+    .describe('Explanation of the syntax errors that were fixed'),
+});
+
+export type MermaidFixResponse = z.infer<typeof mermaidFixResponseSchema>;

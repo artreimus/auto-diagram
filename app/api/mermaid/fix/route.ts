@@ -1,5 +1,5 @@
 import { generateObject } from 'ai';
-import { mermaidSchema, mermaidFixRequestSchema } from '../schema';
+import { mermaidFixRequestSchema, mermaidFixResponseSchema } from '../schema';
 import { createAIModel } from '@/lib/ai-provider';
 import {
   createMermaidFixSystemPrompt,
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
 
   const { object: fixedChart } = await generateObject({
     model: createAIModel('reasoning'),
-    schema: mermaidSchema,
+    schema: mermaidFixResponseSchema,
     system: systemPrompt,
     messages: [
       {
