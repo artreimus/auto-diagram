@@ -30,6 +30,21 @@ export const InputWithSubmit = ({
       <Textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (value.trim()) {
+              const form = e.currentTarget.closest('form');
+              if (form) {
+                const submitEvent = new Event('submit', {
+                  bubbles: true,
+                  cancelable: true,
+                });
+                form.dispatchEvent(submitEvent);
+              }
+            }
+          }
+        }}
         placeholder={placeholder}
         className='w-full text-base font-medium tracking-tight text-monochrome-pure-white placeholder:text-monochrome-ash bg-transparent border border-monochrome-pewter/30 focus:border-monochrome-pure-white/60 hover:border-monochrome-pearl/40 rounded-2xl px-6 py-4 pr-12 transition-all duration-300 ease-out focus:outline-none focus:ring-0 shadow-micro backdrop-blur-sm min-h-[3.5rem] max-h-48 resize-none scrollbar-thin scrollbar-track-transparent scrollbar-thumb-monochrome-pewter/30 hover:scrollbar-thumb-monochrome-pewter/50'
         disabled={disabled || isProcessing}
