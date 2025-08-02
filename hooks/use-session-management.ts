@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { nanoid } from 'nanoid';
 import {
   Session,
@@ -29,6 +29,8 @@ const getSessionsFromStorage = (): Session[] => {
 const saveSessionsToStorage = (sessions: Session[]): void => {
   try {
     localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(sessions));
+    // Dispatch custom event to notify components in the same tab
+    window.dispatchEvent(new Event('sessionStorageUpdate'));
   } catch (error) {
     console.error('Failed to save sessions to localStorage:', error);
     throw new Error('Failed to save sessions');
@@ -78,14 +80,64 @@ interface SessionHookReturn {
 
   // State
   currentSession: Session | null;
+  allSessions: Session[];
   isLoading: boolean;
   error: string | null;
 }
 
 export function useSessionManagement(): SessionHookReturn {
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
+  const [allSessions, setAllSessions] = useState<Session[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Load all sessions on mount and listen for storage changes
+  useEffect(() => {
+    const loadAllSessions = () => {
+      const sessions = getSessionsFromStorage();
+      const validatedSessions = sessions
+        .map((session) => {
+          try {
+            return sessionSchema.parse(session);
+          } catch {
+            return null;
+          }
+        })
+        .filter((session): session is Session => session !== null)
+        .sort(
+          (a, b) =>
+            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+        );
+
+      setAllSessions(validatedSessions);
+    };
+
+    // Load initially
+    loadAllSessions();
+
+    // Listen for storage changes (including from other tabs)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === SESSIONS_STORAGE_KEY) {
+        loadAllSessions();
+      }
+    };
+
+    // Listen for custom storage events from this same tab
+    const handleCustomStorageChange = () => {
+      loadAllSessions();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('sessionStorageUpdate', handleCustomStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener(
+        'sessionStorageUpdate',
+        handleCustomStorageChange
+      );
+    };
+  }, []);
 
   // Create new session
   const createSession = useCallback(async (): Promise<string> => {
@@ -480,6 +532,7 @@ export function useSessionManagement(): SessionHookReturn {
     loadSession,
     getAllSessions,
     currentSession,
+    allSessions,
     isLoading,
     error,
   };
