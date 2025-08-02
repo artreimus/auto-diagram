@@ -22,12 +22,11 @@ import {
 import { useSessionManagement } from '@/hooks/use-session-management';
 import { chartRevealAnimation } from '@/app/lib/animations';
 import { ChartSource, ResultStatus } from '../enum/session';
-import { Session, ChartCreation } from '@/app/validators/session';
+import { ChartCreation } from '@/app/validators/session';
 
 export default function HomePage() {
   const [prompt, setPrompt] = useState('');
   const [hasSubmitted, setHasSubmitted] = useState(false);
-  const [sessionData, setSessionData] = useState<Session | null>(null);
 
   // Use refs to store current sessionId and plannedCharts for onFinish callbacks
   const sessionIdRef = useRef<string | null>(null);
@@ -35,8 +34,14 @@ export default function HomePage() {
   const resultIdRef = useRef<string | null>(null);
 
   // Session management with event-driven sync
-  const { createSession, createEmptyResult, addResult, addChartToResult } =
-    useSessionManagement();
+  const {
+    createSession,
+    createEmptyResult,
+    addResult,
+    addChartVersion,
+    addChartToResult,
+    currentSession,
+  } = useSessionManagement();
 
   // Pattern 1: Sequential Processing - Planner streamObject with onFinish sync
   const plannerHook = useObject({
@@ -165,35 +170,7 @@ export default function HomePage() {
               await addChartToResult(currentSessionId, resultId, chartData);
             }
 
-            // Create session data from the results
-            const sessionData: Session = {
-              id: currentSessionId,
-              results: [
-                {
-                  id: resultId,
-                  prompt: prompt.trim(),
-                  charts: charts.map((chartData) => ({
-                    id: nanoid(),
-                    versions: [
-                      {
-                        version: 1,
-                        chart: chartData.chart,
-                        rationale: chartData.rationale,
-                        source: chartData.source,
-                        error: undefined,
-                      },
-                    ],
-                    currentVersion: 0, // 0-based index for first version
-                    plan: chartData.plan,
-                  })),
-                  createdAt: new Date().toISOString(),
-                  updatedAt: new Date().toISOString(),
-                },
-              ],
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            };
-            setSessionData(sessionData);
+            // Session data will be automatically updated via the hook's sync mechanism
           } catch (error) {
             console.error('Failed to add result:', error);
           }
@@ -202,42 +179,30 @@ export default function HomePage() {
     },
   });
 
-  // Handle fix completion by updating sessionData directly
+  // Handle fix completion by updating session via hook
   const handleFixComplete = useCallback(
-    (chartIndex: number, fixedChart: string, rationale: string) => {
-      if (!sessionData?.results?.[0]) return;
+    async (chartIndex: number, fixedChart: string, rationale: string) => {
+      if (!currentSession?.results?.[0] || !sessionIdRef.current) return;
 
-      setSessionData((prevSession) => {
-        if (!prevSession?.results?.[0]) return prevSession;
+      try {
+        const result = currentSession.results[0];
+        const chart = result.charts[chartIndex];
 
-        const updatedSession = { ...prevSession };
-        const result = { ...updatedSession.results[0] };
-        const charts = [...result.charts];
-        const chart = { ...charts[chartIndex] };
-
-        // Add new version to chart versions
-        const newVersion =
-          Math.max(...chart.versions.map((v) => v.version)) + 1;
-        const newVersionData = {
-          version: newVersion,
-          chart: fixedChart,
-          rationale,
-          source: ChartSource.FIX,
-          error: undefined,
-        };
-
-        chart.versions = [...chart.versions, newVersionData];
-        chart.currentVersion = chart.versions.length - 1; // Use array index
-        charts[chartIndex] = chart;
-        result.charts = charts;
-        result.updatedAt = new Date().toISOString();
-        updatedSession.results = [result, ...updatedSession.results.slice(1)];
-        updatedSession.updatedAt = new Date().toISOString();
-
-        return updatedSession;
-      });
+        if (chart) {
+          // Add the fixed chart as a new version via the hook
+          await addChartVersion(sessionIdRef.current, result.id, chart.id, {
+            chart: fixedChart,
+            rationale,
+            source: ChartSource.FIX,
+            error: undefined,
+          });
+          // The hook will automatically update currentSession via syncSession
+        }
+      } catch (error) {
+        console.error('Failed to save fix result to session:', error);
+      }
     },
-    [sessionData]
+    [currentSession, addChartVersion]
   );
 
   // SYNC POINT #1: Create session immediately on submission
@@ -359,9 +324,10 @@ export default function HomePage() {
                         type: plan.type,
                         description: plan.description,
                         chart:
-                          sessionData?.results?.[0]?.charts?.[index]
+                          currentSession?.results?.[0]?.charts?.[index]
                             ?.versions?.[
-                            sessionData.results[0].charts[index].currentVersion
+                            currentSession.results[0].charts[index]
+                              .currentVersion
                           ]?.chart || '',
                       }}
                       onFixComplete={handleFixComplete}

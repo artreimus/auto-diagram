@@ -77,13 +77,13 @@ interface SessionHookReturn {
   getAllSessions: () => Promise<Session[]>;
 
   // State
-  currentSessionId: string | null;
+  currentSession: Session | null;
   isLoading: boolean;
   error: string | null;
 }
 
 export function useSessionManagement(): SessionHookReturn {
-  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [currentSession, setCurrentSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -112,7 +112,7 @@ export function useSessionManagement(): SessionHookReturn {
       // Save all sessions to single storage key
       saveSessionsToStorage(updatedSessions);
 
-      setCurrentSessionId(sessionId);
+      setCurrentSession(validatedSession);
       return sessionId;
     } catch (err) {
       const errorMessage =
@@ -156,6 +156,11 @@ export function useSessionManagement(): SessionHookReturn {
         const updatedSessions = [...existingSessions];
         updatedSessions[sessionIndex] = validatedSession;
         saveSessionsToStorage(updatedSessions);
+
+        // Update current session if it's the one being synced
+        if (sessionId === currentSession?.id) {
+          setCurrentSession(validatedSession);
+        }
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to sync session';
@@ -412,6 +417,10 @@ export function useSessionManagement(): SessionHookReturn {
 
         // Validate schema
         const validatedSession = sessionSchema.parse(session);
+
+        // Always set as current session when loading
+        setCurrentSession(validatedSession);
+
         return validatedSession;
       } catch (err) {
         const errorMessage =
@@ -468,7 +477,7 @@ export function useSessionManagement(): SessionHookReturn {
     addChartVersion,
     loadSession,
     getAllSessions,
-    currentSessionId,
+    currentSession,
     isLoading,
     error,
   };

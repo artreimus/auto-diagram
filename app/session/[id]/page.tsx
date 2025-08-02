@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useParams } from 'next/navigation';
-import { Session } from '@/app/validators/session';
 import { GeneratedChart } from '@/app/components/GeneratedChart';
 import { useSessionManagement } from '@/hooks/use-session-management';
 import { chartRevealAnimation } from '@/app/lib/animations';
@@ -14,25 +13,24 @@ export default function SessionPage() {
   const params = useParams<{ id: string }>();
   const sessionId = params.id;
 
-  const [session, setSession] = useState<Session | null>(null);
-
   // Session management
-  const { addChartVersion, loadSession, isLoading } = useSessionManagement();
+  const { addChartVersion, loadSession, isLoading, currentSession } =
+    useSessionManagement();
 
   // Load session data when component mounts or sessionId changes
   useEffect(() => {
     if (!sessionId) return;
 
-    loadSession(sessionId).then(setSession);
+    loadSession(sessionId);
   }, [sessionId, loadSession]);
 
   // Handle fix completion by updating sessionData directly
   const handleFixComplete = useCallback(
     async (chartIndex: number, fixedChart: string, rationale: string) => {
-      if (!session?.results?.[0] || !sessionId) return;
+      if (!currentSession?.results?.[0] || !sessionId) return;
 
       try {
-        const result = session.results[0];
+        const result = currentSession.results[0];
         const chart = result.charts[chartIndex];
 
         if (chart) {
@@ -43,19 +41,16 @@ export default function SessionPage() {
             source: ChartSource.FIX,
             error: undefined,
           });
-
-          // Reload session to reflect changes
-          const updatedSession = await loadSession(sessionId);
-          setSession(updatedSession);
+          // The hook will automatically update currentSession via syncSession
         }
       } catch (error) {
         console.error('Failed to save fix result to session:', error);
       }
     },
-    [session, sessionId, addChartVersion, loadSession]
+    [currentSession, sessionId, addChartVersion]
   );
 
-  if (isLoading || (sessionId && !session)) {
+  if (isLoading || (sessionId && !currentSession)) {
     return (
       <div className='min-h-screen bg-monochrome-pure-black text-monochrome-pure-white antialiased flex items-center justify-center'>
         <div className='flex items-center space-x-4'>
@@ -68,7 +63,7 @@ export default function SessionPage() {
     );
   }
 
-  if (!session) {
+  if (!currentSession) {
     return (
       <div className='min-h-screen bg-monochrome-pure-black text-monochrome-pure-white antialiased flex items-center justify-center'>
         <div className='text-center'>
@@ -103,7 +98,7 @@ export default function SessionPage() {
               transition={{ duration: 0.4, delay: 0.1 }}
               className='text-2xl font-light tracking-tight text-monochrome-pure-white mb-2'
             >
-              {session.results[0]?.prompt || 'Session'}
+              {currentSession.results[0]?.prompt || 'Session'}
             </motion.h1>
             <motion.p
               initial={{ opacity: 0 }}
@@ -111,15 +106,16 @@ export default function SessionPage() {
               transition={{ duration: 0.4, delay: 0.2 }}
               className='text-sm text-monochrome-silver'
             >
-              Created on {new Date(session.createdAt).toLocaleDateString()} •{' '}
-              {session.results.length} result
-              {session.results.length !== 1 ? 's' : ''}
+              Created on{' '}
+              {new Date(currentSession.createdAt).toLocaleDateString()} •{' '}
+              {currentSession.results.length} result
+              {currentSession.results.length !== 1 ? 's' : ''}
             </motion.p>
           </div>
 
           {/* Results display */}
           <div className='grid gap-12'>
-            {session.results.map((result, index) => (
+            {currentSession.results.map((result, index) => (
               <motion.div
                 key={result.id}
                 initial={{ opacity: 0, y: 32 }}
@@ -177,7 +173,7 @@ export default function SessionPage() {
                             {...chartRevealAnimation(chartIndex)}
                           >
                             <GeneratedChart
-                              id={`session-${session.id}-${result.id}-${chartIndex}`}
+                              id={`session-${currentSession.id}-${result.id}-${chartIndex}`}
                               plan={chart.plan}
                               chart={{
                                 type: chart.plan.type,
