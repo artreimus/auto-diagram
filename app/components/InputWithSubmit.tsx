@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { MinimalLoadingSpinner } from './MinimalLoadingSpinner';
 import { scaleIn } from '@/app/lib/animations';
-import { ChartType } from '@/app/enum/chart-types';
+import { useCommandSuggestions } from '@/hooks/use-command-suggestions';
 import { useState, useEffect, useRef } from 'react';
 
 interface InputWithSubmitProps {
@@ -18,59 +18,6 @@ interface InputWithSubmitProps {
   autoFocus?: boolean;
 }
 
-const CHART_COMMANDS = [
-  {
-    command: '/flowchart',
-    type: ChartType.FLOWCHART,
-    description: 'Create a flowchart diagram',
-  },
-  {
-    command: '/sequence',
-    type: ChartType.SEQUENCE,
-    description: 'Create a sequence diagram',
-  },
-  {
-    command: '/class',
-    type: ChartType.CLASS,
-    description: 'Create a class diagram',
-  },
-  {
-    command: '/state',
-    type: ChartType.STATE,
-    description: 'Create a state diagram',
-  },
-  {
-    command: '/gantt',
-    type: ChartType.GANTT,
-    description: 'Create a Gantt chart',
-  },
-  {
-    command: '/journey',
-    type: ChartType.JOURNEY,
-    description: 'Create a user journey map',
-  },
-  {
-    command: '/mindmap',
-    type: ChartType.MINDMAP,
-    description: 'Create a mind map',
-  },
-  {
-    command: '/timeline',
-    type: ChartType.TIMELINE,
-    description: 'Create a timeline',
-  },
-  {
-    command: '/gitgraph',
-    type: ChartType.GITGRAPH,
-    description: 'Create a Git graph',
-  },
-  {
-    command: '/',
-    type: undefined,
-    description: 'Show all available chart types',
-  },
-];
-
 export const InputWithSubmit = ({
   value,
   onChange,
@@ -80,10 +27,29 @@ export const InputWithSubmit = ({
   placeholder = 'Ask me anything…',
   autoFocus = false,
 }: InputWithSubmitProps) => {
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [filteredCommands, setFilteredCommands] = useState(CHART_COMMANDS);
   const [cursorPosition, setCursorPosition] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Command suggestions hook
+  const {
+    showSuggestions,
+    filteredCommands,
+    handleSuggestionClick,
+    hideSuggestions,
+    applyFirstSuggestion,
+  } = useCommandSuggestions({
+    value,
+    cursorPosition,
+    onChange,
+    onSuggestionApplied: () => {
+      // Update cursor position after suggestion is applied
+      setTimeout(() => {
+        if (textareaRef.current) {
+          setCursorPosition(textareaRef.current.selectionStart || 0);
+        }
+      }, 0);
+    },
+  });
 
   // Initialize cursor position
   useEffect(() => {
@@ -91,71 +57,6 @@ export const InputWithSubmit = ({
       setCursorPosition(textareaRef.current.selectionStart || 0);
     }
   }, []);
-
-  useEffect(() => {
-    // Get text up to cursor position
-    const textToCursor = value.substring(0, cursorPosition);
-
-    // Find the last "/" before the cursor
-    const lastSlashIndex = textToCursor.lastIndexOf('/');
-
-    if (lastSlashIndex !== -1) {
-      // Get the text from the last "/" to the cursor
-      const commandPart = textToCursor.substring(lastSlashIndex);
-
-      // Only show suggestions if:
-      // 1. The command part starts with "/"
-      // 2. There's no space after the "/" (incomplete command)
-      // 3. The cursor is right after this command part or within it
-      if (commandPart.startsWith('/') && !commandPart.includes(' ')) {
-        const filtered = CHART_COMMANDS.filter((cmd) =>
-          cmd.command.toLowerCase().startsWith(commandPart.toLowerCase())
-        );
-        setFilteredCommands(filtered);
-        setShowSuggestions(filtered.length > 0);
-      } else {
-        setShowSuggestions(false);
-      }
-    } else {
-      setShowSuggestions(false);
-    }
-  }, [value, cursorPosition]);
-
-  const handleSuggestionClick = (command: string) => {
-    if (command === '/') {
-      // Show all commands when clicking on the main "/" option
-      return;
-    }
-
-    // Get text up to cursor position
-    const textToCursor = value.substring(0, cursorPosition);
-    const textAfterCursor = value.substring(cursorPosition);
-
-    // Find the last "/" before the cursor
-    const lastSlashIndex = textToCursor.lastIndexOf('/');
-
-    if (lastSlashIndex !== -1) {
-      // Replace the incomplete command with the selected command
-      const beforeSlash = textToCursor.substring(0, lastSlashIndex);
-      const newValue = beforeSlash + command + ' ' + textAfterCursor;
-
-      onChange(newValue);
-      setShowSuggestions(false);
-
-      // Set cursor position after the inserted command
-      const newCursorPosition = beforeSlash.length + command.length + 1;
-
-      // Focus back to textarea and set cursor position
-      setTimeout(() => {
-        textareaRef.current?.focus();
-        textareaRef.current?.setSelectionRange(
-          newCursorPosition,
-          newCursorPosition
-        );
-        setCursorPosition(newCursorPosition);
-      }, 0);
-    }
-  };
 
   // Track cursor position changes
   const handleCursorChange = () => {
@@ -176,7 +77,7 @@ export const InputWithSubmit = ({
           onKeyUp={handleCursorChange}
           onKeyDown={(e) => {
             if (e.key === 'Escape') {
-              setShowSuggestions(false);
+              hideSuggestions();
               return;
             }
 
@@ -187,12 +88,8 @@ export const InputWithSubmit = ({
             }
 
             if (e.key === 'Enter' && !e.shiftKey) {
-              if (showSuggestions && filteredCommands.length > 0) {
+              if (showSuggestions && applyFirstSuggestion()) {
                 e.preventDefault();
-                const firstCommand = filteredCommands[0];
-                if (firstCommand.command !== '/') {
-                  handleSuggestionClick(firstCommand.command);
-                }
                 return;
               }
 
@@ -211,7 +108,7 @@ export const InputWithSubmit = ({
           }}
           onBlur={() => {
             // Delay hiding suggestions to allow for clicks
-            setTimeout(() => setShowSuggestions(false), 150);
+            setTimeout(() => hideSuggestions(), 150);
           }}
           placeholder={placeholder}
           className='w-full text-base font-medium tracking-tight text-monochrome-pure-white placeholder:text-monochrome-ash bg-transparent border border-monochrome-pewter/30 focus:border-monochrome-pure-white/60 hover:border-monochrome-pearl/40 rounded-2xl px-6 py-4 pr-12 transition-all duration-300 ease-out focus:outline-none focus:ring-0 shadow-micro backdrop-blur-sm min-h-[3.5rem] max-h-48 resize-none scrollbar-thin scrollbar-track-transparent scrollbar-thumb-monochrome-pewter/30 hover:scrollbar-thumb-monochrome-pewter/50'
