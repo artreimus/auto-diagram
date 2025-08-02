@@ -1,88 +1,61 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Session } from '@/lib/session-schema';
-import MermaidDiagram from '@/app/components/MermaidDiagram';
+import { useParams } from 'next/navigation';
+import { Session } from '@/app/validators/session';
+import { GeneratedChart } from '@/app/components/GeneratedChart';
+import { useSessionManagement } from '@/hooks/use-session-management';
+import { chartRevealAnimation } from '@/app/lib/animations';
+import { ChartSource } from '@/app/enum/session';
+import { MinimalLoadingSpinner } from '@/app/components/MinimalLoadingSpinner';
 
-const MinimalLoadingSpinner = () => (
-  <div
-    className='flex items-center justify-center space-x-1'
-    role='status'
-    aria-live='polite'
-    aria-label='Loading session'
-  >
-    {[0, 1, 2].map((index) => (
-      <motion.div
-        key={index}
-        className='w-0.5 h-0.5 bg-monochrome-pure-white rounded-full'
-        animate={{
-          opacity: [0.3, 1, 0.3],
-        }}
-        transition={{
-          duration: 1.2,
-          repeat: Infinity,
-          delay: index * 0.2,
-          ease: 'easeInOut',
-        }}
-      />
-    ))}
-  </div>
-);
+export default function SessionPage() {
+  const params = useParams<{ id: string }>();
+  const sessionId = params.id;
 
-interface SessionPageProps {
-  params: Promise<{ id: string }>;
-}
-
-export default function SessionPage({ params }: SessionPageProps) {
-  return <SessionContent paramsPromise={params} />;
-}
-
-function SessionContent({
-  paramsPromise,
-}: {
-  paramsPromise: Promise<{ id: string }>;
-}) {
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [sessionId, setSessionId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const resolveParams = async () => {
-      try {
-        const { id } = await paramsPromise;
-        setSessionId(id);
-      } catch (error) {
-        console.error('Failed to resolve params:', error);
-        setLoading(false);
-      }
-    };
+  // Session management
+  const { addChartVersion, loadSession, isLoading } = useSessionManagement();
 
-    resolveParams();
-  }, [paramsPromise]);
-
+  // Load session data when component mounts or sessionId changes
   useEffect(() => {
     if (!sessionId) return;
 
-    const loadSession = () => {
+    loadSession(sessionId).then(setSession);
+  }, [sessionId, loadSession]);
+
+  // Handle fix completion by updating sessionData directly
+  const handleFixComplete = useCallback(
+    async (chartIndex: number, fixedChart: string, rationale: string) => {
+      if (!session?.results?.[0] || !sessionId) return;
+
       try {
-        const saved = localStorage.getItem('sessions');
-        if (saved) {
-          const sessions: Session[] = JSON.parse(saved);
-          const foundSession = sessions.find((s) => s.id === sessionId);
-          setSession(foundSession || null);
+        const result = session.results[0];
+        const chart = result.charts[chartIndex];
+
+        if (chart) {
+          // Add the fixed chart as a new version
+          await addChartVersion(sessionId, result.id, chart.id, {
+            chart: fixedChart,
+            rationale,
+            source: ChartSource.FIX,
+            error: undefined,
+          });
+
+          // Reload session to reflect changes
+          const updatedSession = await loadSession(sessionId);
+          setSession(updatedSession);
         }
       } catch (error) {
-        console.error('Failed to load session:', error);
-      } finally {
-        setLoading(false);
+        console.error('Failed to save fix result to session:', error);
       }
-    };
+    },
+    [session, sessionId, addChartVersion, loadSession]
+  );
 
-    loadSession();
-  }, [sessionId]);
-
-  if (loading) {
+  if (isLoading || (sessionId && !session)) {
     return (
       <div className='min-h-screen bg-monochrome-pure-black text-monochrome-pure-white antialiased flex items-center justify-center'>
         <div className='flex items-center space-x-4'>
@@ -130,7 +103,7 @@ function SessionContent({
               transition={{ duration: 0.4, delay: 0.1 }}
               className='text-2xl font-light tracking-tight text-monochrome-pure-white mb-2'
             >
-              Session {session.id.slice(0, 8)}
+              {session.results[0]?.prompt || 'Session'}
             </motion.h1>
             <motion.p
               initial={{ opacity: 0 }}
@@ -162,7 +135,7 @@ function SessionContent({
                   <>
                     {/* Generation history info */}
                     {result.charts.some(
-                      (chart) => chart.metadata.length > 1
+                      (chart) => chart.versions.length > 1
                     ) && (
                       <div className='mt-4 p-3 bg-monochrome-graphite/30 rounded-xl border border-monochrome-pewter/20'>
                         <p className='text-xs text-monochrome-ash mb-2'>
@@ -173,7 +146,7 @@ function SessionContent({
                             <p className='text-xs text-monochrome-silver/90 mb-1'>
                               Chart {chartIndex + 1}: {chart.plan.description}
                             </p>
-                            {chart.metadata.map((version, versionIndex) => (
+                            {chart.versions.map((version, versionIndex) => (
                               <div
                                 key={versionIndex}
                                 className='text-xs text-monochrome-silver/70 mb-1 ml-2'
@@ -194,32 +167,34 @@ function SessionContent({
                     {/* Display all charts in the result */}
                     <div className='grid gap-8'>
                       {result.charts.map((chart, chartIndex) => {
-                        const currentVersion = chart.metadata.find(
-                          (m) => m.version === chart.currentVersion
-                        );
+                        const currentVersion =
+                          chart.versions[chart.currentVersion]; // Use array index
                         if (!currentVersion) return null;
 
                         return (
                           <motion.div
-                            key={`${result.id}-chart-${chartIndex}`}
-                            initial={{ opacity: 0, scale: 0.98 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{
-                              duration: 0.6,
-                              ease: 'easeOut',
-                              delay: chartIndex * 0.1,
-                            }}
+                            key={chartIndex}
+                            {...chartRevealAnimation(chartIndex)}
                           >
-                            {/* Chart plan description */}
-
-                            <MermaidDiagram
-                              key={`${result.id}-${chartIndex}-${chart.currentVersion}`}
+                            <GeneratedChart
                               id={`session-${session.id}-${result.id}-${chartIndex}`}
-                              chart={currentVersion.chart}
-                              onRenderError={() => {}}
-                              planDescription={chart.plan.description}
+                              plan={chart.plan}
+                              chart={{
+                                type: chart.plan.type,
+                                description: currentVersion.rationale,
+                                chart: currentVersion.chart,
+                              }}
+                              onFixComplete={(_, fixedChart, rationale) => {
+                                handleFixComplete(
+                                  chartIndex,
+                                  fixedChart,
+                                  rationale
+                                );
+                              }}
+                              isPlanning={false}
+                              isGenerating={false}
                             />
-                            <div className='my-4 px-4'>
+                            <div className='mt-4 px-4'>
                               <div className='flex items-center gap-2 text-xs text-monochrome-silver'>
                                 <span>
                                   Type:{' '}
@@ -227,12 +202,12 @@ function SessionContent({
                                     chart.plan.type.slice(1)}
                                 </span>
                                 <span>•</span>
-                                <span>Version: {chart.currentVersion}</span>
-                                {chart.metadata.length > 1 && (
+                                <span>Version: {chart.currentVersion + 1}</span>
+                                {chart.versions.length > 1 && (
                                   <>
                                     <span>•</span>
                                     <span>
-                                      {chart.metadata.length} versions
+                                      {chart.versions.length} versions
                                     </span>
                                   </>
                                 )}
