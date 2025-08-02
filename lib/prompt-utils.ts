@@ -51,40 +51,153 @@ You must respond with a JSON object containing exactly three fields:
 
 Here are examples for different chart types:
 
-For flowchart:
-{
-"type": "flowchart",
-"description": "A flowchart showing the user login process with validation and error handling",
-"chart": "flowchart TD\\n A[User enters credentials] --> B{Valid credentials?}\\n B -->|Yes| C[Login successful]\\n B -->|No| D[Show error message]\\n D --> A\\n C --> E[Redirect to dashboard]"
+# Mermaid Examples
+
+## Flowchart
+
+flowchart LR
+A[Hard] -->|Text| B(Round)
+B --> C{Decision}
+C -->|One| D[Result 1]
+C -->|Two| E[Result 2]
+
+## Sequence diagram
+
+sequenceDiagram
+Alice->>John: Hello John, how are you?
+loop HealthCheck
+    John->>John: Fight against hypochondria
+end
+Note right of John: Rational thoughts!
+John-->>Alice: Great!
+John->>Bob: How about you?
+Bob-->>John: Jolly good!
+
+## Gantt chart
+
+gantt
+    section Section
+    Completed :done,    des1, 2014-01-06,2014-01-08
+    Active        :active,  des2, 2014-01-07, 3d
+    Parallel 1   :         des3, after des1, 1d
+    Parallel 2   :         des4, after des1, 1d
+    Parallel 3   :         des5, after des3, 1d
+    Parallel 4   :         des6, after des4, 1d
+
+## Class diagram
+
+classDiagram
+Class01 <|-- AveryLongClass : Cool
+<<Interface>> Class01
+Class09 --> C2 : Where am I?
+Class09 --* C3
+Class09 --|> Class07
+Class07 : equals()
+Class07 : Object[] elementData
+Class01 : size()
+Class01 : int chimp
+Class01 : int gorilla
+class Class10 {
+  <<service>>
+  int id
+  size()
 }
 
-For sequence:
-{
-"type": "sequence",
-"description": "A sequence diagram showing user authentication flow between client, server, and database",
-"chart": "sequenceDiagram\\n participant U as User\\n participant C as Client\\n participant S as Server\\n participant D as Database\\n U->>C: Enter credentials\\n C->>S: Login request\\n S->>D: Validate user\\n D-->>S: User data\\n S-->>C: Authentication token\\n C-->>U: Login success"
+## State diagram
+
+stateDiagram-v2
+[*] --> Still
+Still --> [*]
+Still --> Moving
+Moving --> Still
+Moving --> Crash
+Crash --> [*]
+
+## Pie chart
+
+pie
+"Dogs" : 386
+"Cats" : 85.9
+"Rats" : 15
+
+## Git graph
+
+gitGraph
+  commit
+  commit
+  branch develop
+  checkout develop
+  commit
+  commit
+  checkout main
+  merge develop
+  commit
+  commit
+
+## Bar chart (using gantt)
+
+gantt
+    title Git Issues - days since last update
+    dateFormat  X
+    axisFormat %s
+
+    section Issue19062
+    71   : 0, 71
+    section Issue19401
+    36   : 0, 36
+    section Issue193
+    34   : 0, 34
+    section Issue7441
+    9    : 0, 9
+    section Issue1300
+    5    : 0, 5
+
+## User Journey diagram
+
+journey
+    title My working day
+    section Go to work
+      Make tea: 5: Me
+      Go upstairs: 3: Me
+      Do work: 1: Me, Cat
+    section Go home
+      Go downstairs: 5: Me
+      Sit down: 3: Me
+
+## C4 diagram
+
+C4Context
+title System Context diagram for Internet Banking System
+
+Person(customerA, "Banking Customer A", "A customer of the bank, with personal bank accounts.")
+Person(customerB, "Banking Customer B")
+Person_Ext(customerC, "Banking Customer C")
+System(SystemAA, "Internet Banking System", "Allows customers to view information about their bank accounts, and make payments.")
+
+Person(customerD, "Banking Customer D", "A customer of the bank, <br/> with personal bank accounts.")
+
+Enterprise_Boundary(b1, "BankBoundary") {
+
+  SystemDb_Ext(SystemE, "Mainframe Banking System", "Stores all of the core banking information about customers, accounts, transactions, etc.")
+
+  System_Boundary(b2, "BankBoundary2") {
+    System(SystemA, "Banking System A")
+    System(SystemB, "Banking System B", "A system of the bank, with personal bank accounts.")
+  }
+
+  System_Ext(SystemC, "E-mail system", "The internal Microsoft Exchange e-mail system.")
+  SystemDb(SystemD, "Banking System D Database", "A system of the bank, with personal bank accounts.")
+
+  Boundary(b3, "BankBoundary3", "boundary") {
+    SystemQueue(SystemF, "Banking System F Queue", "A system of the bank, with personal bank accounts.")
+    SystemQueue_Ext(SystemG, "Banking System G Queue", "A system of the bank, with personal bank accounts.")
+  }
 }
 
-For class:
-{
-"type": "class",
-"description": "A class diagram showing the structure of a user management system",
-"chart": "classDiagram\\n class User {\\n +String name\\n +String email\\n +String password\\n +login()\\n +logout()\\n }\\n class UserManager {\\n +createUser()\\n +deleteUser()\\n +updateUser()\\n }\\n UserManager --> User : manages"
-}
-
-For gantt:
-{
-"type": "gantt",
-"description": "A Gantt chart showing project timeline with tasks and dependencies",
-"chart": "gantt\\n title Project Timeline\\n dateFormat YYYY-MM-DD\\n section Planning\\n Requirements :a1, 2024-01-01, 5d\\n Design :a2, after a1, 7d\\n section Development\\n Frontend :a3, after a2, 10d\\n Backend :a4, after a2, 12d\\n Testing :a5, after a3, 5d"
-}
-
-For state:
-{
-"type": "state",
-"description": "A state diagram showing the lifecycle of a user session",
-"chart": "stateDiagram-v2\\n [*] --> LoggedOut\\n LoggedOut --> LoggingIn : login()\\n LoggingIn --> LoggedIn : success\\n LoggingIn --> LoggedOut : failure\\n LoggedIn --> LoggedOut : logout()\\n LoggedIn --> [*]"
-}
+BiRel(customerA, SystemAA, "Uses")
+BiRel(SystemAA, SystemE, "Uses")
+Rel(SystemAA, SystemC, "Sends e-mails", "SMTP")
+Rel(SystemC, customerA, "Sends e-mails to")
 
 Always ensure your Mermaid syntax is correct and follows the official Mermaid documentation. Use proper escaping for newlines (\\n) in the chart field.`;
 
@@ -107,7 +220,7 @@ ${'hasInstructions'}
 Create the Mermaid diagram now.`;
 
 // Mermaid Fix System Prompt (static)
-const mermaidFixSystemBase = `You are an expert at debugging and fixing Mermaid diagram syntax errors. Your job is to fix ONLY the syntax errors and return a corrected Mermaid chart.
+const mermaidFixSystemBase = `You are an expert at debugging and fixing Mermaid diagram syntax errors. Your primary goal is to make broken Mermaid charts render correctly while preserving their original intent and content.
 
 ## CRITICAL RULES FOR SYNTAX FIXING:
 
@@ -123,19 +236,47 @@ You must respond with a JSON object containing exactly two fields:
 - "chart": the corrected Mermaid diagram code with ONLY syntax fixes
 - "explanation": a clear explanation of ONLY the syntax errors you found and how you fixed them
 
-## Common Mermaid syntax issues to watch for:
+## ERROR-SPECIFIC FIXING STRATEGIES:
 
-- Missing or incorrect chart type declarations
-- Invalid node IDs or names (must be alphanumeric, underscores, or hyphens)
-- Incorrect arrow syntax
-- Missing quotes around text with special characters or spaces
-- Invalid subgraph syntax
-- Incorrect indentation
-- Missing semicolons where required
-- Invalid class or style definitions
-- Special characters in node IDs that need escaping
-- Invalid sequence diagram participant names
-- Incorrect Gantt chart date formats
+### Parse Errors:
+- **"Parse error on line X"**: Check for unmatched brackets, missing quotes, or invalid syntax at that line
+- **"Lexical error"**: Look for special characters that need escaping or quoting
+- **"Unexpected token"**: Usually means a keyword or character is used incorrectly
+
+### Common Fixes by Error Pattern:
+
+1. **Text with special characters**: Wrap in double quotes
+   - \`A[User (admin)]\` → \`A["User (admin)"]\`
+   - \`B[Process: data]\` → \`B["Process: data"]\`
+
+2. **Reserved keywords as labels**: Quote them
+   - \`end[End Process]\` → \`End["End Process"]\`
+   - \`class[Class Definition]\` → \`Class["Class Definition"]\`
+
+3. **Invalid node IDs**: Use alphanumeric with underscores/hyphens only
+   - \`user-profile\` ✓ (valid)
+   - \`user profile\` ✗ (invalid) → \`user_profile\` ✓
+
+4. **Missing chart type**: Add proper declaration
+   - Missing \`flowchart TD\` at start
+   - Missing \`sequenceDiagram\` at start
+
+5. **Incorrect arrow syntax**: Fix malformed connections
+   - \`A->B\` → \`A-->B\` (flowchart)
+   - \`A>>B\` → \`A->>B\` (sequence)
+
+6. **Indentation issues**: Fix hierarchical structures
+   - Mindmaps need proper indentation
+   - Subgraphs need consistent spacing
+
+### STEP-BY-STEP FIXING PROCESS:
+
+1. **Identify Error Location**: Focus on the line/area mentioned in error
+2. **Categorize Error Type**: Parse, lexical, syntax, or unexpected token
+3. **Apply Specific Fix**: Use appropriate strategy from above
+4. **Validate Chart Type**: Ensure proper header and syntax for chart type
+5. **Quote Special Content**: Add quotes around any labels with special chars
+6. **Check Connections**: Verify all arrows/connections use correct syntax
 
 **Remember:** This is SYNTAX REPAIR ONLY. Fix the code to render properly while preserving ALL original content and intent.`;
 
@@ -159,15 +300,31 @@ ${'chart'}
 
 ${'error'}
 
-## Specific Instructions for this error:
+## Error Analysis & Fixing Strategy:
 
-Based on the error message, look for:
-- Unquoted text containing special characters like parentheses, brackets, or colons
-- Text that should be wrapped in quotes to prevent parsing errors
-- Indentation issues in mindmap or other hierarchical structures
-- Missing chart type declarations or malformed syntax
+**Step 1: Categorize the Error**
+- If error mentions "Parse error on line X": Focus on that specific line for bracket mismatches, unquoted special chars
+- If error is "Lexical error": Look for special characters that need quoting
+- If error is "Unexpected token": Check chart type declaration and arrow syntax
+- If error is "Syntax error": Check indentation and structure
 
-**CRITICAL:** Fix ONLY the syntax that causes the parsing error. Do not alter the content, structure, or meaning of the chart. Simply ensure it renders properly by adding quotes, fixing indentation, or correcting malformed syntax.`;
+**Step 2: Apply Targeted Fixes**
+Based on the error message above, systematically check:
+
+1. **Chart Type Header**: Ensure proper declaration (\`flowchart TD\`, \`sequenceDiagram\`, etc.)
+2. **Special Characters**: Quote any text containing: \`()\`, \`[]\`, \`{}\`, \`:\`, spaces, or special symbols
+3. **Arrow Syntax**: Verify arrows match chart type (\`-->\` for flowchart, \`->>\` for sequence)
+4. **Reserved Keywords**: Quote any labels using words like "end", "class", "state"
+5. **Node IDs**: Ensure IDs are alphanumeric with underscores/hyphens only
+6. **Indentation**: Fix spacing for hierarchical structures (mindmaps, subgraphs)
+
+**Step 3: Quality Check**
+- Verify all brackets are matched
+- Ensure chart type is correct for the diagram structure
+- Confirm all labels with special characters are quoted
+- Check that original content and meaning are preserved
+
+**CRITICAL:** This is SYNTAX REPAIR ONLY. Fix the code to render properly while preserving ALL original content and intent.`;
 
 // Planner System Prompt
 export const plannerSystemTemplate = PromptTemplate.create<{
