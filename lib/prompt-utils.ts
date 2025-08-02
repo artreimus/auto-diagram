@@ -118,10 +118,8 @@ const mermaidFixSystemBase = `You are an expert at debugging and fixing Mermaid 
 5. **NO CONTENT CHANGES:** Do not alter node names, relationships, or flow logic unless they cause syntax errors
 6. **PRESERVE INTENT:** The fixed chart should accomplish exactly the same visualization goal as the broken one
 
-You must respond with a JSON object containing exactly four fields:
+You must respond with a JSON object containing exactly two fields:
 
-- "type": the chart type (must match the requested type)
-- "description": the description of what the chart shows (keep original intent)
 - "chart": the corrected Mermaid diagram code with ONLY syntax fixes
 - "explanation": a clear explanation of ONLY the syntax errors you found and how you fixed them
 
@@ -136,7 +134,6 @@ You must respond with a JSON object containing exactly four fields:
 - Missing semicolons where required
 - Invalid class or style definitions
 - Special characters in node IDs that need escaping
-- Malformed mindmap node syntax
 - Invalid sequence diagram participant names
 - Incorrect Gantt chart date formats
 
@@ -162,7 +159,15 @@ ${'chart'}
 
 ${'error'}
 
-Fix the syntax errors while preserving all original content and intent.`;
+## Specific Instructions for this error:
+
+Based on the error message, look for:
+- Unquoted text containing special characters like parentheses, brackets, or colons
+- Text that should be wrapped in quotes to prevent parsing errors
+- Indentation issues in mindmap or other hierarchical structures
+- Missing chart type declarations or malformed syntax
+
+**CRITICAL:** Fix ONLY the syntax that causes the parsing error. Do not alter the content, structure, or meaning of the chart. Simply ensure it renders properly by adding quotes, fixing indentation, or correcting malformed syntax.`;
 
 // Planner System Prompt
 export const plannerSystemTemplate = PromptTemplate.create<{
