@@ -294,7 +294,6 @@ export function useSessionManagement(): SessionHookReturn {
           chart: chartData.chart,
           rationale: chartData.rationale,
           source: chartData.source,
-          error: chartData.error,
           status: ResultStatus.COMPLETED,
         };
 
@@ -417,7 +416,6 @@ export function useSessionManagement(): SessionHookReturn {
           rationale: chartData.rationale,
           version: newVersionNumber,
           source: chartData.source,
-          error: chartData.error,
           status: ResultStatus.COMPLETED,
         };
 

@@ -44,7 +44,6 @@ export default function SessionPage() {
             chart: fixedChart,
             rationale,
             source: ChartSource.FIX,
-            error: undefined,
             status: ResultStatus.COMPLETED,
           });
           // The hook will automatically update currentSession via syncSession

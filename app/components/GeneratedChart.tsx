@@ -5,7 +5,10 @@ import { motion } from 'framer-motion';
 import { experimental_useObject as useObject } from '@ai-sdk/react';
 import ReactMarkdown from 'react-markdown';
 import MermaidDiagram from './MermaidDiagram';
-import { MermaidChart, mermaidSchema } from '@/app/api/mermaid/schema';
+import {
+  MermaidChart,
+  mermaidFixResponseSchema,
+} from '@/app/api/mermaid/schema';
 import { Plan } from '../api/planner/schema';
 import { ChartVersion } from '@/app/validators/session';
 import { ChartSource } from '@/app/enum/session';
@@ -52,13 +55,11 @@ export function GeneratedChart({
   const currentVersion =
     versions.length > 0 ? versions[currentVersionIndex] : null;
   const chartContent = currentVersion?.chart || chart.chart || '';
-  const chartDescription =
-    currentVersion?.rationale || chart.description || plan.description;
 
   // Pattern 3: Individual fix hook per chart component
   const fixHook = useObject({
     api: '/api/mermaid/fix',
-    schema: mermaidSchema,
+    schema: mermaidFixResponseSchema,
     onFinish: async (result) => {
       setIsFixing(false);
 
@@ -69,7 +70,7 @@ export function GeneratedChart({
             onFixComplete(
               chartIndex,
               result.object.chart,
-              result.object.description || 'Fixed chart'
+              result.object.explanation || 'Fixed chart'
             );
           }
         } catch (error) {
@@ -92,9 +93,7 @@ export function GeneratedChart({
         chart: chartContent || '',
         error: errorMessage,
         chartType: plan.type,
-        description: chartDescription,
         planDescription: plan.description,
-        previousAttempts: [],
       });
     }
   };
