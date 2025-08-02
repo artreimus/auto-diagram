@@ -22,6 +22,50 @@ import {
 import { useSessionManagement } from '@/hooks/use-session-management';
 import { chartRevealAnimation } from '@/app/lib/animations';
 import { ChartSource, ResultStatus } from '../enum/session';
+import { ChartType } from '../enum/chart-types';
+
+// Utility function to parse chart commands from prompt
+const parseChartCommands = (prompt: string) => {
+  const chartCommands = [
+    { command: '/flowchart', type: ChartType.FLOWCHART },
+    { command: '/sequence', type: ChartType.SEQUENCE },
+    { command: '/class', type: ChartType.CLASS },
+    { command: '/state', type: ChartType.STATE },
+    { command: '/gantt', type: ChartType.GANTT },
+    { command: '/journey', type: ChartType.JOURNEY },
+    { command: '/mindmap', type: ChartType.MINDMAP },
+    { command: '/timeline', type: ChartType.TIMELINE },
+    { command: '/gitgraph', type: ChartType.GITGRAPH },
+  ];
+
+  const requestedCharts: ChartType[] = [];
+  let cleanedPrompt = prompt;
+
+  // Find all chart commands in the prompt
+  for (const { command, type } of chartCommands) {
+    if (prompt.includes(command)) {
+      requestedCharts.push(type);
+      // Remove the command from the prompt
+      cleanedPrompt = cleanedPrompt
+        .replace(new RegExp(command, 'g'), '')
+        .trim();
+    }
+  }
+
+  // Clean up extra spaces
+  cleanedPrompt = cleanedPrompt.replace(/\s+/g, ' ').trim();
+
+  // If chart types were specified, add them to the beginning of the prompt
+  if (requestedCharts.length > 0) {
+    const chartTypesList = requestedCharts.join(', ');
+    cleanedPrompt = `Create ${chartTypesList} charts for: ${cleanedPrompt}`;
+  }
+
+  return {
+    cleanedPrompt,
+    requestedCharts,
+  };
+};
 
 export default function HomePage() {
   const [prompt, setPrompt] = useState('');
@@ -53,11 +97,14 @@ export default function HomePage() {
 
         // Pattern 2 Implementation: Trigger batch mermaid generation immediately
         if (result.object.length > 0) {
+          // Use the cleaned prompt for generation
+          const { cleanedPrompt } = parseChartCommands(prompt.trim());
+
           batchMermaidHook.submit({
             charts: result.object.map((plan: Plan) => ({
               chartType: plan.type,
               description: plan.description,
-              originalUserMessage: prompt,
+              originalUserMessage: cleanedPrompt,
               planDescription: plan.description,
             })),
           });
@@ -195,19 +242,22 @@ export default function HomePage() {
       ) {
         setHasSubmitted(true);
 
+        // Parse chart commands and clean the prompt
+        const { cleanedPrompt } = parseChartCommands(prompt.trim());
+
         // Create session immediately
         const newSessionId = await createSession();
 
         sessionIdRef.current = newSessionId; // Update ref
 
-        // SYNC POINT #1: Store the prompt immediately by creating an empty result
+        // SYNC POINT #1: Store the original prompt for display, but use cleaned prompt for processing
         const resultId = await createEmptyResult(newSessionId, prompt.trim());
 
         resultIdRef.current = resultId;
 
         // Start planning - onFinish will handle sync AND trigger batch generation
         plannerHook.submit({
-          messages: [{ role: 'user', content: prompt.trim() }],
+          messages: [{ role: 'user', content: cleanedPrompt }],
         });
       }
     },
