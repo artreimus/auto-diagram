@@ -260,63 +260,18 @@ const MermaidDiagram = ({
 
   return (
     <div className='space-y-6'>
-
-      {/* Error state with fix button */}
-      {renderError && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className='border border-red-500/30 bg-red-500/5 rounded-2xl p-6 backdrop-blur-sm'
-        >
-          <div className='flex items-start space-x-3 mb-4'>
-            <div className='w-1.5 h-1.5 bg-red-500 rounded-full mt-2 flex-shrink-0' />
-            <div className='flex-1'>
-              <p className='text-monochrome-cloud font-medium mb-1'>
-                Chart rendering failed
-              </p>
-              <p className='text-sm text-monochrome-silver font-light mb-4'>
-                {renderError}
-              </p>
-
-              <div className='flex gap-3'>
-                {onFixClick && (
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => onFixClick?.(renderError || undefined)}
-                    disabled={isFixing}
-                    className={`text-sm font-medium tracking-wide px-4 py-2 rounded-xl border transition-all duration-200 backdrop-blur-sm ${
-                      isFixing
-                        ? 'text-monochrome-ash border-monochrome-pewter/20 bg-monochrome-graphite/10 cursor-not-allowed'
-                        : 'text-monochrome-pure-white hover:text-monochrome-cloud border-monochrome-silver/40 hover:border-monochrome-cloud/60 bg-monochrome-graphite/30 hover:bg-monochrome-slate-dark/40'
-                    }`}
-                  >
-                    {isFixing ? (
-                      <span className='flex items-center space-x-2'>
-                        <div className='w-3 h-3 border border-monochrome-ash border-t-transparent rounded-full animate-spin' />
-                        <span>Fixing...</span>
-                      </span>
-                    ) : (
-                      'Fix Chart'
-                    )}
-                  </motion.button>
-                )}
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      )}
-
       {/* Refined action controls */}
       <div className='flex justify-end gap-3'>
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={downloadChart}
-          className='text-sm text-monochrome-silver hover:text-monochrome-cloud font-light tracking-wide px-4 py-2 rounded-xl border border-monochrome-pewter/30 hover:border-monochrome-silver/40 bg-monochrome-charcoal/10 hover:bg-monochrome-graphite/20 transition-all duration-200 backdrop-blur-sm'
-        >
-          Export PNG
-        </motion.button>
+        {!renderError && (
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={downloadChart}
+            className='text-sm text-monochrome-silver hover:text-monochrome-cloud font-light tracking-wide px-4 py-2 rounded-xl border border-monochrome-pewter/30 hover:border-monochrome-silver/40 bg-monochrome-charcoal/10 hover:bg-monochrome-graphite/20 transition-all duration-200 backdrop-blur-sm'
+          >
+            Export PNG
+          </motion.button>
+        )}
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
@@ -439,6 +394,51 @@ const MermaidDiagram = ({
         )}
       </AnimatePresence>
 
+      {/* Error state with fix button */}
+      {renderError && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className='border border-red-500/30 bg-red-500/5 rounded-2xl p-6 backdrop-blur-sm'
+        >
+          <div className='flex items-start space-x-3 mb-4'>
+            <div className='w-1.5 h-1.5 bg-red-500 rounded-full mt-2 flex-shrink-0' />
+            <div className='flex-1'>
+              <p className='text-monochrome-cloud font-medium mb-1'>
+                Chart rendering failed
+              </p>
+              <p className='text-sm text-monochrome-silver font-light mb-4'>
+                {renderError}
+              </p>
+
+              <div className='flex gap-3'>
+                {onFixClick && (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => onFixClick?.(renderError || undefined)}
+                    disabled={isFixing}
+                    className={`text-sm font-medium tracking-wide px-4 py-2 rounded-xl border transition-all duration-200 backdrop-blur-sm ${
+                      isFixing
+                        ? 'text-monochrome-ash border-monochrome-pewter/20 bg-monochrome-graphite/10 cursor-not-allowed'
+                        : 'text-monochrome-pure-white hover:text-monochrome-cloud border-monochrome-silver/40 hover:border-monochrome-cloud/60 bg-monochrome-graphite/30 hover:bg-monochrome-slate-dark/40'
+                    }`}
+                  >
+                    {isFixing ? (
+                      <span className='flex items-center space-x-2'>
+                        <div className='w-3 h-3 border border-monochrome-ash border-t-transparent rounded-full animate-spin' />
+                        <span>Fixing...</span>
+                      </span>
+                    ) : (
+                      'Fix Chart'
+                    )}
+                  </motion.button>
+                )}
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
       {/* Chart container with custom monochrome styling applied via CSS variables */}
       {!renderError && (
         <motion.div
