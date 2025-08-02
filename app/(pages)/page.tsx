@@ -296,7 +296,7 @@ export default function HomePage() {
                 </h1>
               </div>
               <p className='text-lg font-light text-monochrome-silver tracking-wide'>
-                Visualize anything with AI
+                Turn ideas into Mermaid diagrams instantly
               </p>
             </LandingHero>
           )}

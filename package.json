@@ -1,6 +1,6 @@
 {
   "name": "auto-diagram",
-  "description": "Visualize anything with AI",
+  "description": "Turn ideas into Mermaid diagrams instantly",
   "version": "0.1.0",
   "private": true,
   "scripts": {
