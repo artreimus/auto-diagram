@@ -22,7 +22,6 @@ import {
 import { useSessionManagement } from '@/hooks/use-session-management';
 import { chartRevealAnimation } from '@/app/lib/animations';
 import { ChartSource, ResultStatus } from '../enum/session';
-import { ChartCreation } from '@/app/validators/session';
 
 export default function HomePage() {
   const [prompt, setPrompt] = useState('');
@@ -37,9 +36,9 @@ export default function HomePage() {
   const {
     createSession,
     createEmptyResult,
-    addResult,
     addChartVersion,
     addChartToResult,
+    syncSession,
     currentSession,
   } = useSessionManagement();
 
@@ -48,47 +47,7 @@ export default function HomePage() {
     api: '/api/planner',
     schema: plansSchema,
     onFinish: async (result) => {
-      const currentSessionId = sessionIdRef.current;
-
-      if (currentSessionId && result.object && Array.isArray(result.object)) {
-        // SYNC POINT #2: Planning complete - create result with planned charts
-        try {
-          // Create charts array with planned data (empty versions, currentVersion 0)
-          const charts: ChartCreation[] = result.object.map((plan: Plan) => ({
-            id: nanoid(),
-            versions: [],
-            currentVersion: 0,
-            plan: plan,
-          }));
-
-          if (charts.length > 0) {
-            // Create first chart with empty version
-            const firstChart = {
-              chart: '',
-              rationale: '',
-              source: ChartSource.GENERATION,
-              plan: charts[0].plan,
-            };
-
-            // Create result with first chart
-            const resultId = await addResult(
-              currentSessionId,
-              prompt.trim(),
-              firstChart
-            );
-
-            // Store result ID for later updates
-            resultIdRef.current = resultId;
-
-            // Add remaining charts to the same result
-            for (let i = 1; i < charts.length; i++) {
-              await addChartToResult(currentSessionId, resultId, charts[i]);
-            }
-          }
-        } catch (error) {
-          console.error('Failed to create result during planning:', error);
-        }
-
+      if (result.object && Array.isArray(result.object)) {
         // Store planned charts in ref for batch onFinish callback
         plannedChartsRef.current = result.object;
 
@@ -113,67 +72,51 @@ export default function HomePage() {
     schema: batchMermaidResponseSchema,
     onFinish: async (result) => {
       const currentSessionId = sessionIdRef.current;
+      const currentResultId = resultIdRef.current;
       const currentPlannedCharts = plannedChartsRef.current;
+
       if (
         currentSessionId &&
+        currentResultId &&
         result.object &&
         Array.isArray(currentPlannedCharts)
       ) {
-        // SYNC POINT #3: Batch generation complete - create results
+        // SYNC POINT #3: Batch generation complete - update existing result with chart data
         const mermaidResults = result.object.results;
 
-        // Create a single result with all planned charts
-        const charts = [];
-        for (let index = 0; index < currentPlannedCharts.length; index++) {
-          const plan = currentPlannedCharts[index];
-          const mermaidResult = mermaidResults[index];
+        try {
+          // Update each chart in the existing result with generated data
+          for (let index = 0; index < currentPlannedCharts.length; index++) {
+            const plan = currentPlannedCharts[index];
+            const mermaidResult = mermaidResults[index];
 
-          if (plan && plan.type && plan.description) {
-            charts.push({
-              chart: mermaidResult?.chart?.chart || '',
-              rationale: mermaidResult?.chart?.description || 'Generated chart',
-              source: ChartSource.GENERATION,
-              plan: plan,
-            });
-          }
-        }
-
-        if (charts.length > 0) {
-          try {
-            // Add the first chart as the main result
-            const resultId = await addResult(
-              currentSessionId,
-              prompt.trim(),
-              charts[0]
-            );
-
-            // Store result ID for chart components
-            resultIdRef.current = resultId;
-
-            // Add remaining charts to the same result
-            for (let i = 1; i < charts.length; i++) {
+            if (plan && plan.type && plan.description) {
               const chartData = {
                 id: nanoid(),
                 versions: [
                   {
                     version: 1,
-                    chart: charts[i].chart,
-                    rationale: charts[i].rationale,
-                    source: charts[i].source,
+                    chart: mermaidResult?.chart?.chart || '',
+                    rationale:
+                      mermaidResult?.chart?.description || 'Generated chart',
+                    source: ChartSource.GENERATION,
                     error: undefined,
                     status: ResultStatus.COMPLETED,
                   },
                 ],
                 currentVersion: 0, // 0-based index for first version
-                plan: charts[i].plan,
+                plan: plan,
               };
-              await addChartToResult(currentSessionId, resultId, chartData);
-            }
 
-            // Session data will be automatically updated via the hook's sync mechanism
-          } catch (error) {
-            console.error('Failed to add result:', error);
+              await addChartToResult(
+                currentSessionId,
+                currentResultId,
+                chartData
+              );
+            }
           }
+        } catch (error) {
+          console.error('Failed to update result with chart data:', error);
         }
       }
     },
@@ -195,6 +138,7 @@ export default function HomePage() {
             rationale,
             source: ChartSource.FIX,
             error: undefined,
+            status: ResultStatus.COMPLETED,
           });
           // The hook will automatically update currentSession via syncSession
         }
@@ -203,6 +147,42 @@ export default function HomePage() {
       }
     },
     [currentSession, addChartVersion]
+  );
+
+  // Handle version change for specific charts
+  const handleVersionChange = useCallback(
+    async (chartIndex: number, versionIndex: number) => {
+      if (!currentSession?.results?.[0] || !sessionIdRef.current) return;
+
+      try {
+        const result = currentSession.results[0];
+        const chart = result.charts[chartIndex];
+
+        if (chart && versionIndex < chart.versions.length) {
+          // Update the chart's currentVersion via session management
+          const updatedCharts = [...result.charts];
+          updatedCharts[chartIndex] = {
+            ...chart,
+            currentVersion: versionIndex,
+          };
+
+          const updatedResults = [...currentSession.results];
+          updatedResults[0] = {
+            ...result,
+            charts: updatedCharts,
+            updatedAt: new Date().toISOString(),
+          };
+
+          // Update the entire session with new results
+          await syncSession(sessionIdRef.current, {
+            results: updatedResults,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to change version:', error);
+      }
+    },
+    [currentSession, syncSession]
   );
 
   // SYNC POINT #1: Create session immediately on submission
@@ -315,30 +295,38 @@ export default function HomePage() {
                     typeof plan.type === 'string' &&
                     typeof plan.description === 'string'
                 )
-                .map((plan, index) => (
-                  <motion.div key={index} {...chartRevealAnimation(index)}>
-                    <GeneratedChart
-                      id={`chart-${index}`}
-                      plan={plan}
-                      chart={{
-                        type: plan.type,
-                        description: plan.description,
-                        chart:
-                          batchMermaidHook.object?.results?.[index]?.chart
-                            ?.chart ||
-                          currentSession?.results?.[0]?.charts?.[index]
-                            ?.versions?.[
-                            currentSession.results[0].charts[index]
-                              .currentVersion
-                          ]?.chart ||
-                          '',
-                      }}
-                      onFixComplete={handleFixComplete}
-                      isPlanning={plannerHook.isLoading}
-                      isGenerating={batchMermaidHook.isLoading}
-                    />
-                  </motion.div>
-                ))}
+                .map((plan, index) => {
+                  const sessionChart =
+                    currentSession?.results?.[0]?.charts?.[index];
+                  const currentVersionIndex = sessionChart?.currentVersion || 0;
+                  const currentVersion =
+                    sessionChart?.versions?.[currentVersionIndex];
+
+                  return (
+                    <motion.div key={index} {...chartRevealAnimation(index)}>
+                      <GeneratedChart
+                        id={`chart-${index}`}
+                        plan={plan}
+                        chartIndex={index}
+                        chart={{
+                          type: plan.type,
+                          description: plan.description,
+                          chart:
+                            batchMermaidHook.object?.results?.[index]?.chart
+                              ?.chart ||
+                            currentVersion?.chart ||
+                            '',
+                        }}
+                        versions={sessionChart?.versions || []}
+                        currentVersionIndex={currentVersionIndex}
+                        onFixComplete={handleFixComplete}
+                        onVersionChange={handleVersionChange}
+                        isPlanning={plannerHook.isLoading}
+                        isGenerating={batchMermaidHook.isLoading}
+                      />
+                    </motion.div>
+                  );
+                })}
             </ChartGenerationSection>
           )}
         </ResultsSection>

@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import { GeneratedChart } from '@/app/components/GeneratedChart';
 import { useSessionManagement } from '@/hooks/use-session-management';
 import { chartRevealAnimation } from '@/app/lib/animations';
-import { ChartSource } from '@/app/enum/session';
+import { ChartSource, ResultStatus } from '@/app/enum/session';
 import { MinimalLoadingSpinner } from '@/app/components/MinimalLoadingSpinner';
 
 export default function SessionPage() {
@@ -14,8 +14,13 @@ export default function SessionPage() {
   const sessionId = params.id;
 
   // Session management
-  const { addChartVersion, loadSession, isLoading, currentSession } =
-    useSessionManagement();
+  const {
+    addChartVersion,
+    loadSession,
+    syncSession,
+    isLoading,
+    currentSession,
+  } = useSessionManagement();
 
   // Load session data when component mounts or sessionId changes
   useEffect(() => {
@@ -40,6 +45,7 @@ export default function SessionPage() {
             rationale,
             source: ChartSource.FIX,
             error: undefined,
+            status: ResultStatus.COMPLETED,
           });
           // The hook will automatically update currentSession via syncSession
         }
@@ -48,6 +54,42 @@ export default function SessionPage() {
       }
     },
     [currentSession, sessionId, addChartVersion]
+  );
+
+  // Handle version change for specific charts
+  const handleVersionChange = useCallback(
+    async (chartIndex: number, versionIndex: number) => {
+      if (!currentSession?.results?.[0] || !sessionId) return;
+
+      try {
+        const result = currentSession.results[0];
+        const chart = result.charts[chartIndex];
+
+        if (chart && versionIndex < chart.versions.length) {
+          // Update the chart's currentVersion via session management
+          const updatedCharts = [...result.charts];
+          updatedCharts[chartIndex] = {
+            ...chart,
+            currentVersion: versionIndex,
+          };
+
+          const updatedResults = [...currentSession.results];
+          updatedResults[0] = {
+            ...result,
+            charts: updatedCharts,
+            updatedAt: new Date().toISOString(),
+          };
+
+          // Update the entire session with new results
+          await syncSession(sessionId, {
+            results: updatedResults,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to change version:', error);
+      }
+    },
+    [currentSession, sessionId, syncSession]
   );
 
   if (isLoading || (sessionId && !currentSession)) {
@@ -129,37 +171,6 @@ export default function SessionPage() {
               >
                 {result.charts.length > 0 && (
                   <>
-                    {/* Generation history info */}
-                    {result.charts.some(
-                      (chart) => chart.versions.length > 1
-                    ) && (
-                      <div className='mt-4 p-3 bg-monochrome-graphite/30 rounded-xl border border-monochrome-pewter/20'>
-                        <p className='text-xs text-monochrome-ash mb-2'>
-                          Generation History
-                        </p>
-                        {result.charts.map((chart, chartIndex) => (
-                          <div key={chartIndex} className='mb-2 last:mb-0'>
-                            <p className='text-xs text-monochrome-silver/90 mb-1'>
-                              Chart {chartIndex + 1}: {chart.plan.description}
-                            </p>
-                            {chart.versions.map((version, versionIndex) => (
-                              <div
-                                key={versionIndex}
-                                className='text-xs text-monochrome-silver/70 mb-1 ml-2'
-                              >
-                                Version {version.version}: {version.source}
-                                {version.error && (
-                                  <span className='ml-2 text-monochrome-ash'>
-                                    • {version.error}
-                                  </span>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
                     {/* Display all charts in the result */}
                     <div className='grid gap-8'>
                       {result.charts.map((chart, chartIndex) => {
@@ -175,11 +186,14 @@ export default function SessionPage() {
                             <GeneratedChart
                               id={`session-${currentSession.id}-${result.id}-${chartIndex}`}
                               plan={chart.plan}
+                              chartIndex={chartIndex}
                               chart={{
                                 type: chart.plan.type,
                                 description: currentVersion.rationale,
                                 chart: currentVersion.chart,
                               }}
+                              versions={chart.versions}
+                              currentVersionIndex={chart.currentVersion}
                               onFixComplete={(_, fixedChart, rationale) => {
                                 handleFixComplete(
                                   chartIndex,
@@ -187,6 +201,7 @@ export default function SessionPage() {
                                   rationale
                                 );
                               }}
+                              onVersionChange={handleVersionChange}
                               isPlanning={false}
                               isGenerating={false}
                             />

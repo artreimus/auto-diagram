@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { nanoid } from 'nanoid';
 import { planSchema } from '@/app/api/planner/schema';
-import { ChartSource } from '@/app/enum/session';
+import { ChartSource, ResultStatus } from '@/app/enum/session';
 
 /**
  * Shared primitives
@@ -21,6 +21,7 @@ export const chartVersionSchema = z.object({
   version: z.number().int().gte(1), // 1 = original, 2+ = fixes
   source: z.nativeEnum(ChartSource),
   error: z.string().optional(),
+  status: z.nativeEnum(ResultStatus).default(ResultStatus.COMPLETED),
 });
 
 /**
