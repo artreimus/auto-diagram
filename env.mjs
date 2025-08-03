@@ -7,8 +7,11 @@ export const env = createEnv({
     // AI Provider selection
     AI_PROVIDER: z.nativeEnum(AIProvider).default(AIProvider.GOOGLE),
 
-    OPENROUTER_API_KEY: z.string().optional(),
+    // API Keys (validated to ensure at least one is provided)
     GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),
+    OPENROUTER_API_KEY: z.string().optional(),
+    ANTHROPIC_API_KEY: z.string().optional(),
+    OPENAI_API_KEY: z.string().optional(),
 
     // Model configuration
     GOOGLE_FAST_MODEL: z.string().default('gemini-2.5-flash'),
@@ -19,6 +22,10 @@ export const env = createEnv({
     OPENROUTER_REASONING_MODEL: z
       .string()
       .default('deepseek/deepseek-r1-0528:free'),
+    ANTHROPIC_FAST_MODEL: z.string().default('claude-sonnet-4-20250514'),
+    ANTHROPIC_REASONING_MODEL: z.string().default('claude-opus-4-20250514'),
+    OPENAI_FAST_MODEL: z.string().default('gpt-4o-mini'),
+    OPENAI_REASONING_MODEL: z.string().default('o3'),
     EXA_API_KEY: z.string().optional(),
   },
   client: {
@@ -28,14 +35,21 @@ export const env = createEnv({
     // AI Provider selection
     AI_PROVIDER: process.env.AI_PROVIDER,
 
-    OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
+    // API Keys
     GOOGLE_GENERATIVE_AI_API_KEY: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+    OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
 
     // Model configuration
     GOOGLE_FAST_MODEL: process.env.GOOGLE_FAST_MODEL,
     GOOGLE_REASONING_MODEL: process.env.GOOGLE_REASONING_MODEL,
     OPENROUTER_FAST_MODEL: process.env.OPENROUTER_FAST_MODEL,
     OPENROUTER_REASONING_MODEL: process.env.OPENROUTER_REASONING_MODEL,
+    ANTHROPIC_FAST_MODEL: process.env.ANTHROPIC_FAST_MODEL,
+    ANTHROPIC_REASONING_MODEL: process.env.ANTHROPIC_REASONING_MODEL,
+    OPENAI_FAST_MODEL: process.env.OPENAI_FAST_MODEL,
+    OPENAI_REASONING_MODEL: process.env.OPENAI_REASONING_MODEL,
     EXA_API_KEY: process.env.EXA_API_KEY,
   },
   /**
