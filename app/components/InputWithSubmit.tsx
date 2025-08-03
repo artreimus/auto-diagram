@@ -188,7 +188,7 @@ export const InputWithSubmit = ({
       </AnimatePresence>
 
       {/* Elegant loading state */}
-      {true && (
+      {isProcessing && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
