@@ -7,7 +7,7 @@ import { GeneratedChart } from '@/app/components/GeneratedChart';
 import { useSessionManagement } from '@/hooks/use-session-management';
 import { chartRevealAnimation } from '@/app/lib/animations';
 import { ChartSource, ResultStatus } from '@/app/enum/session';
-import { MinimalLoadingSpinner } from '@/app/components/MinimalLoadingSpinner';
+import { BouncingDotsLoader } from '@/app/components/BouncingDotsLoader';
 
 export default function SessionPage() {
   const params = useParams<{ id: string }>();
@@ -95,7 +95,7 @@ export default function SessionPage() {
     return (
       <div className='min-h-screen bg-monochrome-pure-black text-monochrome-pure-white antialiased flex items-center justify-center'>
         <div className='flex items-center space-x-4'>
-          <MinimalLoadingSpinner />
+          <BouncingDotsLoader />
           <span className='text-monochrome-silver font-light tracking-wide'>
             Loading session...
           </span>

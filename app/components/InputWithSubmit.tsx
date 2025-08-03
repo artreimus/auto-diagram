@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { MinimalLoadingSpinner } from './MinimalLoadingSpinner';
+import { BouncingDotsLoader } from './BouncingDotsLoader';
 import { scaleIn } from '@/app/lib/animations';
 import { useCommandSuggestions } from '@/hooks/use-command-suggestions';
 import { useState, useEffect, useRef } from 'react';
@@ -188,13 +188,13 @@ export const InputWithSubmit = ({
       </AnimatePresence>
 
       {/* Elegant loading state */}
-      {isProcessing && (
+      {true && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           className='absolute right-6 top-1/2 -translate-y-1/2 z-10'
         >
-          <MinimalLoadingSpinner />
+          <BouncingDotsLoader />
         </motion.div>
       )}
     </form>

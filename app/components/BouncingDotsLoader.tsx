@@ -6,7 +6,7 @@ interface MinimalLoadingSpinnerProps {
   className?: string;
 }
 
-export const MinimalLoadingSpinner = ({
+export const BouncingDotsLoader = ({
   className = '',
 }: MinimalLoadingSpinnerProps) => (
   <div

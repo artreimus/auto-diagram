@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { MinimalLoadingSpinner } from './MinimalLoadingSpinner';
+import { BouncingDotsLoader } from './BouncingDotsLoader';
 import { ResultStatus } from '../enum/session';
 
 interface ProcessingStateProps {
@@ -15,7 +15,7 @@ export const ProcessingState = ({ isPlanning }: ProcessingStateProps) => (
     className='flex items-center justify-center py-8'
   >
     <div className='flex items-center space-x-4'>
-      <MinimalLoadingSpinner />
+      <BouncingDotsLoader />
       <span className='text-monochrome-silver font-light tracking-wide'>
         {isPlanning ? ResultStatus.PLANNING : ResultStatus.GENERATING}
       </span>
