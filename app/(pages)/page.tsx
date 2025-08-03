@@ -365,62 +365,30 @@ export default function HomePage() {
                     const currentVersion =
                       sessionChart?.versions?.[currentVersionIndex];
 
-                    const hasGeneratedContent =
-                      batchMermaidHook.object?.results?.[index]?.chart?.chart ||
-                      currentVersion?.chart;
-
-                    // Show skeleton if we're generating and don't have content yet
-                    if (batchMermaidHook.isLoading && !hasGeneratedContent) {
-                      return (
-                        <motion.div
-                          key={index}
-                          {...chartRevealAnimation(index)}
-                          className='border border-monochrome-pewter/20 bg-monochrome-charcoal/10 rounded-3xl p-8 backdrop-blur-sm shadow-soft'
-                        >
-                          <div className='mb-8'>
-                            <h3 className='text-xl font-light tracking-tight text-monochrome-pure-white capitalize mb-3'>
-                              {plan.type} Visualization
-                            </h3>
-                          </div>
-                          <Skeleton className='h-80 w-full bg-monochrome-pewter/50' />
-                        </motion.div>
-                      );
-                    }
-
-                    // Show GeneratedChart only when we have content or are in a state that should display it
-                    if (hasGeneratedContent || !batchMermaidHook.isLoading) {
-                      return (
-                        <motion.div
-                          key={index}
-                          {...chartRevealAnimation(index)}
-                        >
-                          <GeneratedChart
-                            id={`chart-${index}`}
-                            plan={plan}
-                            chartIndex={index}
-                            chart={{
-                              type: plan.type,
-                              description: plan.description,
-                              chart:
-                                batchMermaidHook.object?.results?.[index]?.chart
-                                  ?.chart ||
-                                currentVersion?.chart ||
-                                '',
-                            }}
-                            versions={sessionChart?.versions || []}
-                            currentVersionIndex={currentVersionIndex}
-                            onFixComplete={handleFixComplete}
-                            onVersionChange={handleVersionChange}
-                            isPlanning={plannerHook.isLoading}
-                            isGenerating={
-                              batchMermaidHook.isLoading && !hasGeneratedContent
-                            }
-                          />
-                        </motion.div>
-                      );
-                    }
-
-                    return null;
+                    return (
+                      <motion.div key={index} {...chartRevealAnimation(index)}>
+                        <GeneratedChart
+                          id={`chart-${index}`}
+                          plan={plan}
+                          chartIndex={index}
+                          chart={{
+                            type: plan.type,
+                            description: plan.description,
+                            chart:
+                              batchMermaidHook.object?.results?.[index]?.chart
+                                ?.chart ||
+                              currentVersion?.chart ||
+                              '',
+                          }}
+                          versions={sessionChart?.versions || []}
+                          currentVersionIndex={currentVersionIndex}
+                          onFixComplete={handleFixComplete}
+                          onVersionChange={handleVersionChange}
+                          isPlanning={plannerHook.isLoading}
+                          isGenerating={batchMermaidHook.isLoading}
+                        />
+                      </motion.div>
+                    );
                   })}
               {plannerHook.isLoading && (
                 <motion.div
