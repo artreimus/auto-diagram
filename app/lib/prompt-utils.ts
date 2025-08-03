@@ -1,5 +1,5 @@
+import { ChartType } from '../enum/chart-types';
 import { PromptTemplate } from './prompt-template';
-import { ChartType } from '../app/enum/chart-types';
 
 // Mermaid Best Practices
 export const mermaidBestPractices = `# Mermaid Syntax That Renders Reliably in React (with \`mermaid\` npm)

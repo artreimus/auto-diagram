@@ -20,11 +20,11 @@ import {
   ResultsSection,
   ChartGenerationSection,
 } from '../components/AnimatedWrappers';
-import { useSessionManagement } from '@/hooks/use-session-management';
+import { useSessionManagement } from '@/app/hooks/use-session-management';
 import { chartRevealAnimation } from '@/app/lib/animations';
 import { ChartSource, ResultStatus } from '../enum/session';
 import { ChartType } from '../enum/chart-types';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from '@/app/components/ui/skeleton';
 
 // Utility function to parse chart commands from prompt
 const parseChartCommands = (prompt: string) => {

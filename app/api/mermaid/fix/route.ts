@@ -1,10 +1,10 @@
 import { generateObject } from 'ai';
 import { mermaidFixRequestSchema, mermaidFixResponseSchema } from '../schema';
-import { createAIModel } from '@/lib/ai-provider';
+import { createAIModel } from '@/app/lib/ai-provider';
 import {
   createMermaidFixSystemPrompt,
   createMermaidFixUserPrompt,
-} from '@/lib/prompt-utils';
+} from '@/app/lib/prompt-utils';
 
 export async function POST(req: Request) {
   try {

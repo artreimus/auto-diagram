@@ -1,4 +1,4 @@
-import { PromptTemplate } from '../prompt-template';
+import { PromptTemplate } from '../app/lib/prompt-template';
 
 describe('PromptTemplate', () => {
   describe('Basic functionality', () => {

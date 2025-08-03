@@ -1,11 +1,11 @@
 import { streamObject } from 'ai';
 import { plansSchema } from './schema';
-import { createAIModel } from '@/lib/ai-provider';
+import { createAIModel } from '@/app/lib/ai-provider';
 import {
   createPlannerSystemPrompt,
   createPlannerUserPrompt,
   enhancePromptWithWebSearch,
-} from '@/lib/prompt-utils';
+} from '@/app/lib/prompt-utils';
 import { env } from 'process';
 import Exa from 'exa-js';
 

@@ -1,4 +1,4 @@
-import { ChartType } from '../../app/enum/chart-types';
+import { ChartType } from '@/app/enum/chart-types';
 import {
   createMermaidGenerationSystemPrompt,
   createMermaidGenerationUserPrompt,
@@ -9,7 +9,7 @@ import {
   mermaidGenerationUserTemplate,
   mermaidFixUserTemplate,
   plannerSystemTemplate,
-} from '../prompt-utils';
+} from '../app/lib/prompt-utils';
 
 describe('Prompt Functions', () => {
   describe('createMermaidGenerationSystemPrompt', () => {

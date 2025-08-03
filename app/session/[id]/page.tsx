@@ -4,7 +4,7 @@ import { useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useParams } from 'next/navigation';
 import { GeneratedChart } from '@/app/components/GeneratedChart';
-import { useSessionManagement } from '@/hooks/use-session-management';
+import { useSessionManagement } from '@/app/hooks/use-session-management';
 import { chartRevealAnimation } from '@/app/lib/animations';
 import { ChartSource, ResultStatus } from '@/app/enum/session';
 import { BouncingDotsLoader } from '@/app/components/BouncingDotsLoader';

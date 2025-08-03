@@ -1,10 +1,10 @@
 import { streamObject } from 'ai';
 import { mermaidSchema, mermaidRequestSchema } from './schema';
-import { createAIModel } from '@/lib/ai-provider';
+import { createAIModel } from '@/app/lib/ai-provider';
 import {
   createMermaidGenerationSystemPrompt,
   createMermaidGenerationUserPrompt,
-} from '@/lib/prompt-utils';
+} from '@/app/lib/prompt-utils';
 
 export async function POST(req: Request) {
   const body = await req.json();

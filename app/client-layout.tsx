@@ -1,13 +1,14 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+
+import { HistorySidebar } from './components/HistorySidebar';
+import { useSessionManagement } from '@/app/hooks/use-session-management';
 import {
   SidebarProvider,
   SidebarInset,
   SidebarTrigger,
-} from '@/components/ui/sidebar';
-import { HistorySidebar } from './components/HistorySidebar';
-import { useSessionManagement } from '@/hooks/use-session-management';
+} from './components/ui/sidebar';
 
 interface ClientLayoutProps {
   children: React.ReactNode;

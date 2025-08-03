@@ -14,7 +14,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from '@/components/ui/sidebar';
+} from '@/app/components/ui/sidebar';
 import { Session } from '@/app/validators/session';
 import { AutoDiagramLogo } from './AutoDiagramLogo';
 import { useRouter } from 'next/navigation';

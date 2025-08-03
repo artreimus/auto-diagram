@@ -1,10 +1,10 @@
 import { generateObject } from 'ai';
 import { mermaidSchema, batchMermaidRequestSchema } from '../schema';
-import { createAIModel } from '@/lib/ai-provider';
+import { createAIModel } from '@/app/lib/ai-provider';
 import {
   createMermaidGenerationSystemPrompt,
   createMermaidGenerationUserPrompt,
-} from '@/lib/prompt-utils';
+} from '@/app/lib/prompt-utils';
 import { nanoid } from 'nanoid';
 
 export async function POST(req: Request) {
