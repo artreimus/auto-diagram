@@ -26,7 +26,6 @@ export const PlannedChartsBadges = ({
         Planned Visualizations
       </h2>
       <div className='flex flex-wrap gap-3'>
-        {isLoading && <Skeleton className='h-8 w-32 bg-monochrome-pewter/50' />}
         {plannedCharts.map((plan, index) => (
           <motion.div key={index} {...staggeredFadeInScale(index)}>
             <Badge
@@ -37,6 +36,7 @@ export const PlannedChartsBadges = ({
             </Badge>
           </motion.div>
         ))}
+        {isLoading && <Skeleton className='h-8 w-28 bg-monochrome-pewter/50' />}
       </div>
     </motion.div>
   );
