@@ -264,7 +264,7 @@ export default function HomePage() {
 
         // Start planning - onFinish will handle sync AND trigger batch generation
         plannerHook.submit({
-          messages: [{ role: 'user', content: cleanedPrompt }],
+          prompt: cleanedPrompt,
         });
       }
     },

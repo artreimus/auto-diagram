@@ -437,6 +437,61 @@ export function createPlannerSystemPrompt(): string {
   });
 }
 
+export function createPlannerUserPrompt(userPrompt: string): string {
+  return `${plannerUserTemplate.format({})}\n\n**User Request:**\n${userPrompt}`;
+}
+
+// Web Search Enhancement Types
+interface SearchResult {
+  title?: string | null;
+  url?: string | null;
+  publishedDate?: string | null;
+  text?: string | null;
+}
+
+/**
+ * Enhances a user prompt with web search results
+ * @param originalPrompt - The original user prompt
+ * @param searchResults - Array of search results from web search
+ * @returns Enhanced prompt with search context and instructions
+ */
+export function enhancePromptWithWebSearch(
+  originalPrompt: string,
+  searchResults: SearchResult[]
+): string {
+  // If no search results, return original prompt
+  if (!searchResults || searchResults.length === 0) {
+    return originalPrompt;
+  }
+
+  // Format search results with proper attribution and structure
+  const searchContext = searchResults
+    .map(
+      (result, index) =>
+        `**Source ${index + 1}: ${result.title || 'Unknown Title'}**\n` +
+        `*URL: ${result.url || 'Unknown URL'}*\n` +
+        `*Published: ${result.publishedDate || 'Unknown'}*\n\n` +
+        `${result.text?.substring(0, 800) || 'No content available'}...\n\n` +
+        `---\n`
+    )
+    .join('\n');
+
+  // Create enhanced prompt with proper prompt engineering
+  return `${originalPrompt}
+
+## Additional Context from Web Sources
+
+*The following sources provide current information that may be relevant to your request. Please consider this information when planning diagrams, but prioritize the user's specific requirements above all else.*
+
+${searchContext}
+
+**Instructions for using these sources:**
+- Use the source information to enhance accuracy and provide current context
+- The sources are supplementary - the user's original request takes priority
+- If sources contain relevant technical details, data, or examples, incorporate them thoughtfully
+- If sources don't align with the user's request, focus on the original request instead`;
+}
+
 // Export templates for testing
 export const mermaidGenerationSystemTemplate = {
   format: () => mermaidGenerationSystemBase,

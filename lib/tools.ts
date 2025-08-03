@@ -1,8 +1,9 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import Exa from 'exa-js';
+import { env } from '@/env.mjs';
 
-export const exa = new Exa(process.env.EXA_API_KEY);
+export const exa = new Exa(env.EXA_API_KEY);
 
 export const webSearch = tool({
   description: 'Search the web for up-to-date information',

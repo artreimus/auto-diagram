@@ -19,7 +19,7 @@ export const env = createEnv({
     OPENROUTER_REASONING_MODEL: z
       .string()
       .default('deepseek/deepseek-r1-0528:free'),
-    EXA_API_KEY: z.string(),
+    EXA_API_KEY: z.string().optional(),
   },
   client: {
     // Nothing here
