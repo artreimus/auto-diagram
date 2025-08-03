@@ -2,6 +2,21 @@
 
 Transform your ideas into beautiful diagrams with the power of AI. Describe any process, architecture, or workflow in natural language and watch it come to life as stunning [Mermaid](https://mermaid.js.org/) diagrams.
 
+## 📸 Screenshots
+
+### Main Interface
+<img src="./public/homescreen.png" alt="Auto Diagram Home Screen" width="800" />
+
+### Command Suggestions
+<img src="./public/homescreen-with-suggestion.png" alt="Auto Diagram with Command Suggestions" width="800" />
+
+### Generated Diagrams
+<img src="./public/session.png" alt="Generated Diagram Session" width="800" />
+
+### Demo
+<!-- TODO: Add demo GIF showing the app in action -->
+*Demo GIF coming soon - showcasing the complete workflow from prompt to diagram*
+
 ## ✨ Features
 
 - **🤖 AI-Powered Diagramming**: Describe complex systems, workflows, or ideas in natural language
