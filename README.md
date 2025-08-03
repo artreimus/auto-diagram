@@ -1,5 +1,7 @@
 # Auto Diagram
 
+_Built with ❤️ by [@artreimus](https://github.com/artreimus) from [Ylang Labs](https://github.com/ylang-labs)_
+
 Transform your ideas into beautiful diagrams with the power of AI. Describe any process, architecture, or workflow in natural language and watch it come to life as stunning [Mermaid](https://mermaid.js.org/) diagrams.
 
 ## 📸 Screenshots
