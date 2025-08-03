@@ -226,7 +226,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🙏 Acknowledgments
 
 - [Mermaid.js](https://mermaid.js.org/) for the amazing diagramming library
-- [AI SDK](https://sdk.vercel.ai/) for the powerful AI integration toolkit
 - [Vercel](https://vercel.com/) for the hosting platform and development tools
 - [shadcn/ui](https://ui.shadcn.com/) for the beautiful UI components
 
