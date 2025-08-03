@@ -1,144 +1,215 @@
 # Auto Diagram
 
-Effortlessly generate beautiful [Mermaid](https://mermaid.js.org/) diagrams from your ideas using AI.
+Transform your ideas into beautiful diagrams with the power of AI. Describe any process, architecture, or workflow in natural language and watch it come to life as stunning [Mermaid](https://mermaid.js.org/) diagrams.
 
-This project is a [Next.js](https://nextjs.org) application that leverages the [Vercel AI SDK](https://sdk.vercel.ai/) to transform natural language prompts into stunning diagrams and charts. Describe a process, architecture, or sequence, and watch it come to life.
+## ✨ Features
 
-<!-- Optional: Add a screenshot or a GIF of the application in action -->
-<!-- ![Screenshot of Mermaid Sketch AI](./screenshot.png) -->
+- **🤖 AI-Powered Diagramming**: Describe complex systems, workflows, or ideas in natural language
+- **📊 Multi-Chart Generation**: Intelligent AI planner creates multiple related diagrams from a single prompt
+- **⚡ Chart Command Shortcuts**: Type `/flowchart`, `/sequence`, `/class` and more for quick chart type selection
+- **🔄 AI Mermaid Syntax Fix**: Use AI to fix invalid Mermaid syntax for improved reliability
+- **💾 Session Management**: Automatic save to local storage with shareable unique URLs
+- **🎨 Polished UI**: Beautiful, minimalist interface with fluid animations powered by Framer Motion
+- **🔧 Multi-Provider Support**: Choose from Google Gemini, OpenRouter, Anthropic Claude, or OpenAI
+- **🌐 Web Search Integration**: Enhanced diagram generation with EXA API web search capabilities
+- **📱 Responsive Design**: Works seamlessly on desktop and mobile devices
 
-## Key Features
+## 🚀 Getting Started
 
-- **AI-Powered Diagramming**: Describe a complex system, workflow, or idea in natural language.
-- **Multi-Chart Generation**: An AI planner breaks down high-level prompts to generate multiple, related diagrams in one go.
-- **Chart History**: Automatically saves sessions to local storage. Revisit your creations anytime via a unique URL.
-- **Self-Correcting Syntax**: An API endpoint automatically fixes invalid Mermaid syntax, improving reliability.
-- **Real-time Streaming**: Diagram code is streamed to the client as it's generated for a responsive experience.
-- **Polished, Animated UI**: A beautiful, minimalist interface with fluid animations powered by Framer Motion.
-- **Highly Configurable**: Customize AI models for different tasks (planning vs. generation) via environment variables.
+### Prerequisites
 
-## How It Works
+- [Node.js](https://nodejs.org/) (version 20.x or higher)
+- At least one AI provider API key (see configuration below)
 
-The application follows a simple but powerful flow to generate diagrams:
+### Installation
 
-1.  **User Prompt**: The user enters a descriptive prompt for the diagram(s) they want to create.
-2.  **Planning Phase**: The **Planner API** (`/api/planner`) receives the prompt. It uses a powerful "reasoning" model to determine if one or multiple diagrams are needed and plans them out.
-3.  **Generation Phase**: For each planned chart, the **Mermaid API** (`/api/mermaid`) calls a "fast" model to generate the Mermaid syntax.
-4.  **Syntax Correction**: If the generated syntax is invalid, the frontend can request a fix from the **Fixer API** (`/api/mermaid/fix`), which asks the AI to correct its mistake.
-5.  **Rendering**: The frontend receives the final Mermaid syntax and uses the `mermaid.js` library to render the interactive diagram.
-6.  **Session Saving**: Once all charts are complete, the entire session (prompt + charts) is saved to local storage, and the user is redirected to a unique page for that session.
+1. **Clone the repository**
 
-This entire process is powered by an intelligent `ai-provider` that selects the best AI provider (Google or OpenRouter) based on your configured API keys.
+   ```bash
+   git clone https://github.com/artreimus/auto-diagram.git
+   cd auto-diagram
+   ```
 
-## Tech Stack
+2. **Install dependencies**
 
-- **Framework**: [Next.js](https://nextjs.org)
-- **AI**: [Vercel AI SDK](https://sdk.vercel.ai/docs), [@ai-sdk/google](https://sdk.vercel.ai/docs/guides/providers/google-gemini), [@openrouter/ai-sdk-provider](https://github.com/OpenRouter/ai-sdk-provider)
-- **Diagramming**: [Mermaid](https://mermaid.js.org/)
-- **UI**: [React](https://react.dev/), [shadcn/ui](https://ui.shadcn.com/), [Tailwind CSS](https://tailwindcss.com/), [Framer Motion](https://www.framer.com/motion/)
-- **Schema & Validation**: [Zod](https://zod.dev/), [@t3-oss/env-nextjs](https://env.t3.gg/)
-- **Icons**: [Lucide React](https://lucide.dev/guide/packages/lucide-react)
+   ```bash
+   npm install
+   ```
 
-## Getting Started
+3. **Set up environment variables**
 
-Follow these steps to set up and run the project locally.
+   ```bash
+   cp .env.example .env.local
+   ```
 
-### 1. Prerequisites
+4. **Configure your API keys** (edit `.env.local`)
 
-Make sure you have [Node.js](https://nodejs.org/en) (version 20.x or higher) installed on your machine.
+   ```env
+   # Choose your preferred AI provider (at least one required)
+   AI_PROVIDER=google  # Options: google, openrouter, anthropic, openai
 
-### 2. Clone the Repository
+   # API Keys (at least one required)
+   GOOGLE_GENERATIVE_AI_API_KEY=your_google_api_key_here
+   OPENROUTER_API_KEY=your_openrouter_api_key_here
+   ANTHROPIC_API_KEY=your_anthropic_api_key_here
+   OPENAI_API_KEY=your_openai_api_key_here
 
-### 3. Set Up Environment Variables
+   # Optional: Web search capabilities
+   EXA_API_KEY=your_exa_api_key_here
+   ```
 
-Create a `.env.local` file in the root of the project by copying the example file:
+5. **Start the development server**
 
-```bash
-cp .env.example .env.local
+   ```bash
+   npm run dev
+   ```
+
+6. **Open your browser** to [http://localhost:3000](http://localhost:3000)
+
+## 🔧 Configuration
+
+### AI Provider Setup
+
+Choose from four supported AI providers:
+
+| Provider             | API Key Required               | Get Your Key                              |
+| -------------------- | ------------------------------ | ----------------------------------------- |
+| **Google Gemini**    | `GOOGLE_GENERATIVE_AI_API_KEY` | [Get key](https://ai.google.dev/)         |
+| **OpenRouter**       | `OPENROUTER_API_KEY`           | [Get key](https://openrouter.ai/)         |
+| **Anthropic Claude** | `ANTHROPIC_API_KEY`            | [Get key](https://console.anthropic.com/) |
+| **OpenAI**           | `OPENAI_API_KEY`               | [Get key](https://platform.openai.com/)   |
+
+### Model Configuration (Optional)
+
+Customize the models used for different tasks:
+
+```env
+# Google Models
+GOOGLE_FAST_MODEL=gemini-2.5-flash
+GOOGLE_REASONING_MODEL=gemini-2.5-pro
+
+# OpenRouter Models
+OPENROUTER_FAST_MODEL=mistralai/devstral-small-2505:free
+OPENROUTER_REASONING_MODEL=deepseek/deepseek-r1-0528:free
+
+# Anthropic Models
+ANTHROPIC_FAST_MODEL=claude-sonnet-4-20250514
+ANTHROPIC_REASONING_MODEL=claude-opus-4-20250514
+
+# OpenAI Models
+OPENAI_FAST_MODEL=gpt-4o-mini
+OPENAI_REASONING_MODEL=o3
 ```
 
-Now, open `.env.local` and add your API keys and desired model configurations.
+## 🏗️ How It Works
 
-### 4. Install Dependencies
+The application uses a sophisticated three-phase process:
+
+<div align="center">
+  <img src="./public/flowchart-auto-diagram.png" alt="Auto Diagram Workflow" width="600" />
+</div>
+
+**Phase Details:**
+
+1. **📝 Planning Phase**: AI analyzes your prompt and plans single or multiple diagrams
+   - Optional web search integration via EXA API for enhanced context
+   - Intelligent breakdown of complex prompts into multiple related charts
+2. **⚡ Generation Phase**: Fast AI models generate Mermaid syntax for each planned chart
+   - Parallel processing for multiple charts
+   - Real-time streaming of generated syntax
+3. **🔍 Correction Phase**: User-triggered syntax correction when needed
+   - Manual activation via fix button when syntax errors occur
+   - AI-powered error detection and correction
+
+## 🛠️ Tech Stack
+
+- **Framework**: [Next.js 15](https://nextjs.org) with App Router
+- **AI Integration**: [AI SDK v5](https://sdk.vercel.ai/) with multiple provider support
+- **Diagramming**: [Mermaid.js](https://mermaid.js.org/) for interactive diagrams
+- **UI Components**: [shadcn/ui](https://ui.shadcn.com/) with [Tailwind CSS](https://tailwindcss.com/)
+- **Animations**: [Framer Motion](https://www.framer.com/motion/) for smooth transitions
+- **Validation**: [Zod](https://zod.dev/) for type-safe schemas
+- **Environment**: [@t3-oss/env-nextjs](https://env.t3.gg/) for validated environment variables
+- **Search**: [EXA API](https://exa.ai/) for web search integration
+
+## 📦 Deployment
+
+### Deploy on Vercel (Recommended)
+
+1. Fork this repository
+2. Connect your fork to [Vercel](https://vercel.com/new)
+3. Add your environment variables in the Vercel dashboard
+4. Deploy automatically with every push
+
+### Other Platforms
+
+This is a standard Next.js application and can be deployed on any platform that supports Node.js.
+
+## 🧪 Development
 
 ```bash
-npm install
-```
-
-### 5. Run the Development Server
-
-```bash
+# Start development server with hot reload
 npm run dev
+
+# Build for production
+npm run build
+
+# Run tests
+npm run test
+
+# Run linting
+npm run lint
+
+# Format code
+npm run format
 ```
 
-The application should now be running at [http://localhost:3000](http://localhost:3000).
+## 🤝 Contributing
 
-## Configuration
+We welcome contributions! Here's how you can help:
 
-The application uses environment variables for configuration, validated by [@t3-oss/env-nextjs](https://env.t3.gg/).
+1. **Fork the repository**
+2. **Create a feature branch**
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+3. **Make your changes**
+4. **Add tests if applicable**
+5. **Run linting and tests**
+   ```bash
+   npm run lint
+   npm run test
+   ```
+6. **Commit your changes**
+   ```bash
+   git commit -m 'feat: add some feature'
+   ```
+7. **Push to your branch**
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+8. **Open a Pull Request**
 
-### Provider Selection
+### Development Guidelines
 
-You can choose between two AI providers by setting the appropriate API key:
+- Follow the existing code style and conventions
+- Write clear commit messages using [conventional commits](https://www.conventionalcommits.org/)
+- Add tests for new features
+- Update documentation as needed
 
-1.  **Google Gemini**: Used if `GOOGLE_GENERATIVE_AI_API_KEY` is set.
-2.  **OpenRouter**: Used if `OPENROUTER_API_KEY` is set.
+## 📄 License
 
-If both keys are provided, Google Gemini will be used as the primary provider based on the default `AI_PROVIDER` setting.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-### Required Variables
+## 🙏 Acknowledgments
 
-```env
-# At least one API key is required for the app to function.
-# Choose either Google Gemini OR OpenRouter (or both)
+- [Mermaid.js](https://mermaid.js.org/) for the amazing diagramming library
+- [AI SDK](https://sdk.vercel.ai/) for the powerful AI integration toolkit
+- [Vercel](https://vercel.com/) for the hosting platform and development tools
+- [shadcn/ui](https://ui.shadcn.com/) for the beautiful UI components
 
-# Option 1: Use Google Gemini (get a key from https://ai.google.dev/)
-GOOGLE_GENERATIVE_AI_API_KEY="your-google-ai-api-key"
+---
 
-# Option 2: Use OpenRouter (get a key from https://openrouter.ai/)
-OPENROUTER_API_KEY="your-openrouter-api-key"
-```
+**Made with ❤️ for the developer community**
 
-### Optional Variables
-
-```env
-
-# --- Model Configuration ---
-# You can override the default models with any compatible model from
-# Google or OpenRouter.
-
-# Google Models (used when GOOGLE_GENERATIVE_AI_API_KEY is available)
-GOOGLE_FAST_MODEL="gemini-1.5-flash-latest"
-GOOGLE_REASONING_MODEL="gemini-1.5-pro-latest"
-
-# OpenRouter Models (used as fallback or if Google key is not set)
-# A good free option is: "mistralai/mistral-7b-instruct:free"
-OPENROUTER_FAST_MODEL="mistralai/mistral-7b-instruct:free"
-OPENROUTER_REASONING_MODEL="anthropic/claude-3-haiku-20240307"
-```
-
-## Deployment
-
-The easiest way to deploy this Next.js app is to use the [Vercel Platform](https://vercel.com/new).
-
-- Fork the repository.
-- Create a new project on Vercel and import your forked repository.
-- Add the required environment variables from your `.env.local` file to the Vercel project settings.
-- Vercel will automatically build and deploy your application.
-
-For more details, see the [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying).
-
-## Contributing
-
-Contributions are welcome! If you have ideas for new features, bug fixes, or improvements, please open an issue or submit a pull request.
-
-1.  Fork the repository.
-2.  Create a new branch (`git checkout -b feature/your-feature-name`).
-3.  Make your changes.
-4.  Commit your changes (`git commit -m 'Add some feature'`).
-5.  Push to the branch (`git push origin feature/your-feature-name`).
-6.  Open a pull request.
-
-## License
-
-This project is licensed under the MIT License. See the `LICENSE` file for details.
+[Report Issues](https://github.com/artreimus/auto-diagram/issues) • [Request Features](https://github.com/artreimus/auto-diagram/issues) • [View Documentation](https://github.com/artreimus/auto-diagram/blob/main/README.md)
