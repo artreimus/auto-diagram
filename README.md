@@ -20,9 +20,7 @@ Transform your ideas into beautiful diagrams with the power of AI. Describe any 
 
 ### Demo
 
-<video src="./public/auto-diagram-demo.mp4" controls width="800">
-  Your browser does not support the video tag.
-</video>
+<img src="./public/demo.gif" alt="Auto Diagram Demo" width="800" />
 
 _Complete workflow demonstration - from natural language prompt to generated Mermaid diagram_
 
