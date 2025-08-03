@@ -325,10 +325,9 @@ export default function HomePage() {
           )}
 
           {/* Processing state - minimal and sophisticated */}
-          {plannerHook.isLoading ||
-            (batchMermaidHook.isLoading && (
-              <ProcessingState isPlanning={plannerHook.isLoading} />
-            ))}
+          {(plannerHook.isLoading || batchMermaidHook.isLoading) && (
+            <ProcessingState isPlanning={plannerHook.isLoading} />
+          )}
 
           {/* Chart planning preview - subtle revelation */}
           {(plannerHook.isLoading ||
