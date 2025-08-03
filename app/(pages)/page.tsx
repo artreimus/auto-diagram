@@ -24,6 +24,7 @@ import { useSessionManagement } from '@/hooks/use-session-management';
 import { chartRevealAnimation } from '@/app/lib/animations';
 import { ChartSource, ResultStatus } from '../enum/session';
 import { ChartType } from '../enum/chart-types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Utility function to parse chart commands from prompt
 const parseChartCommands = (prompt: string) => {
@@ -330,59 +331,111 @@ export default function HomePage() {
             ))}
 
           {/* Chart planning preview - subtle revelation */}
-          {plannerHook.object && plannerHook.object.length > 0 && (
+          {(plannerHook.isLoading ||
+            (plannerHook.object && plannerHook.object.length > 0)) && (
             <PlannedChartsBadges
-              plannedCharts={plannerHook.object.filter(
-                (plan): plan is Plan =>
-                  plan != null &&
-                  typeof plan.type === 'string' &&
-                  typeof plan.description === 'string'
-              )}
-            />
-          )}
-
-          {/* Generated charts - the main revelation */}
-          {plannerHook.object && plannerHook.object.length > 0 && (
-            <ChartGenerationSection>
-              {plannerHook.object
-                .filter(
+              plannedCharts={
+                plannerHook.object?.filter(
                   (plan): plan is Plan =>
                     plan != null &&
                     typeof plan.type === 'string' &&
                     typeof plan.description === 'string'
-                )
-                .map((plan, index) => {
-                  const sessionChart =
-                    currentSession?.results?.[0]?.charts?.[index];
-                  const currentVersionIndex = sessionChart?.currentVersion || 0;
-                  const currentVersion =
-                    sessionChart?.versions?.[currentVersionIndex];
+                ) || []
+              }
+              isLoading={plannerHook.isLoading}
+            />
+          )}
 
-                  return (
-                    <motion.div key={index} {...chartRevealAnimation(index)}>
-                      <GeneratedChart
-                        id={`chart-${index}`}
-                        plan={plan}
-                        chartIndex={index}
-                        chart={{
-                          type: plan.type,
-                          description: plan.description,
-                          chart:
-                            batchMermaidHook.object?.results?.[index]?.chart
-                              ?.chart ||
-                            currentVersion?.chart ||
-                            '',
-                        }}
-                        versions={sessionChart?.versions || []}
-                        currentVersionIndex={currentVersionIndex}
-                        onFixComplete={handleFixComplete}
-                        onVersionChange={handleVersionChange}
-                        isPlanning={plannerHook.isLoading}
-                        isGenerating={batchMermaidHook.isLoading}
-                      />
-                    </motion.div>
-                  );
-                })}
+          {/* Generated charts - the main revelation */}
+          {(plannerHook.isLoading ||
+            (plannerHook.object && plannerHook.object.length > 0)) && (
+            <ChartGenerationSection>
+              {plannerHook.object &&
+                plannerHook.object
+                  .filter(
+                    (plan): plan is Plan =>
+                      plan != null &&
+                      typeof plan.type === 'string' &&
+                      typeof plan.description === 'string'
+                  )
+                  .map((plan, index) => {
+                    const sessionChart =
+                      currentSession?.results?.[0]?.charts?.[index];
+                    const currentVersionIndex =
+                      sessionChart?.currentVersion || 0;
+                    const currentVersion =
+                      sessionChart?.versions?.[currentVersionIndex];
+
+                    const hasGeneratedContent =
+                      batchMermaidHook.object?.results?.[index]?.chart?.chart ||
+                      currentVersion?.chart;
+
+                    // Show skeleton if we're generating and don't have content yet
+                    if (batchMermaidHook.isLoading && !hasGeneratedContent) {
+                      return (
+                        <motion.div
+                          key={index}
+                          {...chartRevealAnimation(index)}
+                          className='border border-monochrome-pewter/20 bg-monochrome-charcoal/10 rounded-3xl p-8 backdrop-blur-sm shadow-soft'
+                        >
+                          <div className='mb-8'>
+                            <h3 className='text-xl font-light tracking-tight text-monochrome-pure-white capitalize mb-3'>
+                              {plan.type} Visualization
+                            </h3>
+                          </div>
+                          <Skeleton className='h-80 w-full bg-monochrome-pewter/50' />
+                        </motion.div>
+                      );
+                    }
+
+                    // Show GeneratedChart only when we have content or are in a state that should display it
+                    if (hasGeneratedContent || !batchMermaidHook.isLoading) {
+                      return (
+                        <motion.div
+                          key={index}
+                          {...chartRevealAnimation(index)}
+                        >
+                          <GeneratedChart
+                            id={`chart-${index}`}
+                            plan={plan}
+                            chartIndex={index}
+                            chart={{
+                              type: plan.type,
+                              description: plan.description,
+                              chart:
+                                batchMermaidHook.object?.results?.[index]?.chart
+                                  ?.chart ||
+                                currentVersion?.chart ||
+                                '',
+                            }}
+                            versions={sessionChart?.versions || []}
+                            currentVersionIndex={currentVersionIndex}
+                            onFixComplete={handleFixComplete}
+                            onVersionChange={handleVersionChange}
+                            isPlanning={plannerHook.isLoading}
+                            isGenerating={
+                              batchMermaidHook.isLoading && !hasGeneratedContent
+                            }
+                          />
+                        </motion.div>
+                      );
+                    }
+
+                    return null;
+                  })}
+              {plannerHook.isLoading && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.4 }}
+                  className='border border-monochrome-pewter/20 bg-monochrome-charcoal/10 rounded-3xl p-8 backdrop-blur-sm shadow-soft'
+                >
+                  <div className='mb-8'>
+                    <Skeleton className='h-6 w-48 bg-monochrome-pewter/50 mb-3' />
+                  </div>
+                  <Skeleton className='h-80 w-full bg-monochrome-pewter/50' />
+                </motion.div>
+              )}
             </ChartGenerationSection>
           )}
         </ResultsSection>
