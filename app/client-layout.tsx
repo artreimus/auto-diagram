@@ -9,6 +9,7 @@ import {
   SidebarInset,
   SidebarTrigger,
 } from './components/ui/sidebar';
+import { Toaster } from './components/ui/sonner';
 
 interface ClientLayoutProps {
   children: React.ReactNode;
@@ -59,6 +60,7 @@ export function ClientLayout({ children }: ClientLayoutProps) {
           <div className='relative flex-1'>{children}</div>
         </SidebarInset>
       </div>
+      <Toaster />
     </SidebarProvider>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import mermaid from 'mermaid';
+import { toast } from 'sonner';
 
 type MermaidProps = {
   id: string;
@@ -257,6 +258,11 @@ const MermaidDiagram = ({
           error?.message || String(error) || 'Chart rendering failed';
         console.error('Mermaid render error:', error);
         setRenderError(errorMessage);
+
+        // Show error toast for diagram rendering failure
+        toast.error('Diagram rendering failed', {
+          description: errorMessage,
+        });
       });
     return () => {
       isStale = true;

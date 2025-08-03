@@ -5,6 +5,7 @@ import { experimental_useObject as useObject } from '@ai-sdk/react';
 import { motion } from 'framer-motion';
 import { nanoid } from 'nanoid';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 import { plansSchema, Plan } from '@/app/api/planner/schema';
 import { batchMermaidResponseSchema } from '@/app/api/mermaid/schema';
@@ -98,6 +99,11 @@ export default function HomePage() {
         // Store planned charts in ref for batch onFinish callback
         plannedChartsRef.current = result.object;
 
+        // Show success toast for planning completion
+        toast.success('Planning completed', {
+          description: `${result.object.length} chart${result.object.length === 1 ? '' : 's'} planned successfully`,
+        });
+
         // Pattern 2 Implementation: Trigger batch mermaid generation immediately
         if (result.object.length > 0) {
           // Use the cleaned prompt for generation
@@ -169,6 +175,11 @@ export default function HomePage() {
           console.error('Failed to update result with chart data:', error);
         }
 
+        // Show success toast for generation completion
+        toast.success('Charts generated successfully', {
+          description: `${currentPlannedCharts.length} chart${currentPlannedCharts.length === 1 ? '' : 's'} created`,
+        });
+
         // Redirect to session page after successful generation
         if (currentSessionId) {
           router.push(`/session/${currentSessionId}`);
@@ -194,6 +205,12 @@ export default function HomePage() {
             source: ChartSource.FIX,
             status: ResultStatus.COMPLETED,
           });
+
+          // Show success toast for fix completion
+          toast.success('Chart fixed successfully', {
+            description: 'The diagram has been corrected and updated',
+          });
+
           // The hook will automatically update currentSession via syncSession
         }
       } catch (error) {
@@ -321,7 +338,13 @@ export default function HomePage() {
         >
           {/* Error state - restrained and informative */}
           {plannerHook.error && (
-            <ErrorState message={plannerHook.error.message} />
+            <>
+              <ErrorState message={plannerHook.error.message} />
+              {/* Show error toast for planning failure */}
+              {toast.error('Planning failed', {
+                description: plannerHook.error.message,
+              }) && null}
+            </>
           )}
 
           {/* Processing state - minimal and sophisticated */}
