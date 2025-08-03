@@ -1,0 +1,17 @@
+<svg viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
+  <!-- Abstract diagram representation with nodes and connections -->
+  <circle cx='6' cy='6' r='2' fill='white' />
+  <circle cx='18' cy='6' r='2' fill='white' />
+  <circle cx='12' cy='18' r='2' fill='white' />
+
+  <!-- Connection lines -->
+  <path
+    d='M8 6h8M6 8l5.2 8.4M18 8l-5.2 8.4'
+    stroke='white'
+    strokeWidth='1.5'
+    strokeLinecap='round'
+  />
+
+  <!-- Central accent element -->
+  <circle cx='12' cy='10' r='1.5' fill='white' opacity='0.6' />
+</svg>
