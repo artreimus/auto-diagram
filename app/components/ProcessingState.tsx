@@ -12,12 +12,17 @@ export const ProcessingState = ({ isPlanning }: ProcessingStateProps) => (
   <motion.div
     initial={{ opacity: 0 }}
     animate={{ opacity: 1 }}
-    className='flex items-center justify-center py-8'
+    className='flex items-center justify-center py-2'
   >
     <div className='flex items-center space-x-4'>
       <BouncingDotsLoader />
       <span className='text-monochrome-silver font-light tracking-wide'>
-        {isPlanning ? ResultStatus.PLANNING : ResultStatus.GENERATING}
+        {(isPlanning ? ResultStatus.PLANNING : ResultStatus.GENERATING)
+          .charAt(0)
+          .toUpperCase() +
+          (isPlanning ? ResultStatus.PLANNING : ResultStatus.GENERATING).slice(
+            1
+          )}
       </span>
     </div>
   </motion.div>

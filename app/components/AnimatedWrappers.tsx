@@ -66,7 +66,7 @@ export const ResultsSection = ({ children, show }: ResultsSectionProps) => {
           animate={delayed.animate}
           exit={delayed.exit}
           transition={delayed.transition}
-          className='container mx-auto px-6 pb-16 pt-12'
+          className='container mx-auto px-6 pb-8 pt-8'
         >
           {children}
         </motion.div>
