@@ -5,17 +5,24 @@ Transform your ideas into beautiful diagrams with the power of AI. Describe any 
 ## 📸 Screenshots
 
 ### Main Interface
+
 <img src="./public/homescreen.png" alt="Auto Diagram Home Screen" width="800" />
 
 ### Command Suggestions
+
 <img src="./public/homescreen-with-suggestion.png" alt="Auto Diagram with Command Suggestions" width="800" />
 
 ### Generated Diagrams
+
 <img src="./public/session.png" alt="Generated Diagram Session" width="800" />
 
 ### Demo
-<!-- TODO: Add demo GIF showing the app in action -->
-*Demo GIF coming soon - showcasing the complete workflow from prompt to diagram*
+
+<video src="./public/auto-diagram-demo.mp4" controls width="800">
+  Your browser does not support the video tag.
+</video>
+
+_Complete workflow demonstration - from natural language prompt to generated Mermaid diagram_
 
 ## ✨ Features
 
